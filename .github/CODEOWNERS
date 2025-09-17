@@ -1,50 +1,50 @@
 # MediaOS Code Owners
 
-# Global owners - all files
-* @mediaos-team
+# Global owner - all files
+* @garthpuckerin
 
 # API package - backend team
-packages/api/ @api-team @backend-team
+packages/api/ @garthpuckerin @backend-team
 
 # Web package - frontend team  
-packages/web/ @frontend-team @ui-team
+packages/web/ @garthpuckerin @frontend-team @ui-team
 
 # Workers package - backend team
-packages/workers/ @backend-team @workers-team
+packages/workers/ @garthpuckerin @backend-team @workers-team
 
 # Adapters package - integration team
-packages/adapters/ @integration-team @adapters-team
+packages/adapters/ @garthpuckerin @integration-team @adapters-team
 
 # Database - database team
-db/ @database-team @backend-team
+db/ @garthpuckerin @database-team @backend-team
 
-# Documentation - documentation team
-*.md @docs-team @mediaos-team
-docs/ @docs-team
+# Documentation - documentation owner
+*.md @garthpuckerin
+docs/ @garthpuckerin
 
 # CI/CD and GitHub workflows - DevOps team
-.github/ @devops-team @ci-team
+.github/ @garthpuckerin @devops-team @ci-team
 
 # Docker and deployment - DevOps team
-Dockerfile @devops-team
-docker-compose*.yml @devops-team
+Dockerfile @garthpuckerin @devops-team
+docker-compose*.yml @garthpuckerin @devops-team
 
 # Configuration files - platform team
-package.json @platform-team
-pnpm-workspace.yaml @platform-team
-tsconfig.json @platform-team
-.eslintrc.json @platform-team
-.prettierrc.json @platform-team
+package.json @garthpuckerin @platform-team
+pnpm-workspace.yaml @garthpuckerin @platform-team
+tsconfig.json @garthpuckerin @platform-team
+.eslintrc.json @garthpuckerin @platform-team
+.prettierrc.json @garthpuckerin @platform-team
 
 # Testing configuration - QA team
-vitest.config.ts @qa-team
-playwright.config.ts @qa-team
-test/ @qa-team
+vitest.config.ts @garthpuckerin @qa-team
+playwright.config.ts @garthpuckerin @qa-team
+test/ @garthpuckerin @qa-team
 
 # Security and compliance - security team
-AI_GUARDRAILS.md @security-team
-.github/workflows/ @security-team @devops-team
+AI_GUARDRAILS.md @garthpuckerin @security-team
+.github/workflows/ @garthpuckerin @security-team @devops-team
 
 # Branch management - platform team
-BRANCH_MANAGEMENT.md @platform-team
-.github/BRANCH_PROTECTION.md @platform-team
+BRANCH_MANAGEMENT.md @garthpuckerin @platform-team
+.github/BRANCH_PROTECTION.md @garthpuckerin @platform-team

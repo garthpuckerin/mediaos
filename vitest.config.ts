@@ -19,6 +19,7 @@ export default defineConfig({
         '**/__tests__/**',
         '**/*.test.*',
         '**/*.spec.*',
+        'playwright-tests/**',
         'packages/web/src/main.tsx',
         'packages/api/src/index.ts'
       ],
@@ -33,7 +34,8 @@ export default defineConfig({
     },
     setupFiles: ['./test/setup.ts'],
     testTimeout: 10000,
-    hookTimeout: 10000
+    hookTimeout: 10000,
+    exclude: ['playwright-tests/**']
   },
   resolve: {
     alias: {
