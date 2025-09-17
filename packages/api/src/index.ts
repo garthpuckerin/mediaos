@@ -1,5 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
+import rateLimit from '@fastify/rate-limit';
+import sensible from '@fastify/sensible';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -10,6 +13,14 @@ const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info'
   }
+});
+
+// Security & utility middleware
+await app.register(sensible);
+await app.register(helmet);
+await app.register(rateLimit, {
+  max: Number(process.env.RATE_LIMIT_MAX || 100),
+  timeWindow: process.env.RATE_LIMIT_WINDOW || '1 minute'
 });
 
 // CORS configuration

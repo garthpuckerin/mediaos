@@ -32,6 +32,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Security Audit (critical only)
+        run: npm run audit:ci
 name: CI/CD Pipeline
 
 on:
