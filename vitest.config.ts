@@ -35,7 +35,7 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     testTimeout: 10000,
     hookTimeout: 10000,
-    exclude: ['playwright-tests/**']
+    exclude: ['playwright-tests/**', 'node_modules/**']
   },
   resolve: {
     alias: {
