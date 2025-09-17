@@ -8,26 +8,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Comprehensive development infrastructure setup
-- ESLint and Prettier configuration for code quality
-- Vitest testing framework with coverage reporting
-- Playwright E2E testing setup
-- Pre-commit hooks with Husky and lint-staged
-- CI/CD pipeline with GitHub Actions
-- Database migration and seeding system
-- Comprehensive documentation (PRD, Architecture, Contributing)
-- TypeScript strict configuration
-- Development environment configuration
+- TBD
 
 ### Changed
-- Updated package.json files with development dependencies
-- Enhanced project structure with proper tooling
-- Improved Docker configuration for development
+- TBD
 
 ### Security
-- Added security scanning in CI pipeline
-- Implemented proper .gitignore for sensitive files
-- Added environment variable validation
+- TBD
+
+## [0.2.0] - 2025-09-17
+
+### Added
+- Established npm workspaces (migrated from pnpm)
+- CI workflow (lint, type-check, test, build) via GitHub Actions
+- Husky hooks (pre-commit, commit-msg) and lint-staged
+- Vitest test setup with coverage thresholds
+- Dependabot weekly updates for npm
+- SECURITY.md with policy and practices
+- Development documentation aligned to npm
+
+### Changed
+- Updated root scripts to npm equivalents
+- Normalized documentation filenames to lowercase and fixed links
+- Hardened TypeScript config (strict) across packages
+
+### Security
+- Added automated dependency updates (Dependabot)
+- Documented npm audit and CI fail-on-critical approach
 
 ## [0.1.0] - 2025-09-17
 

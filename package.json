@@ -27,12 +27,12 @@
   ],
   "engines": {
     "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "npm": ">=9.0.0"
   },
-  "packageManager": "pnpm@8.15.0",
+  "packageManager": "npm@9.0.0",
   "scripts": {
-    "dev": "concurrently -n API,WEB -c blue,green \"pnpm --filter @mediaos/api dev\" \"pnpm --filter @mediaos/web dev\"",
-    "build": "pnpm --filter @mediaos/web build && pnpm --filter @mediaos/api build && pnpm --filter @mediaos/workers build && pnpm --filter @mediaos/adapters build",
+    "dev": "concurrently -n API,WEB -c blue,green \"npm run dev -w @mediaos/api\" \"npm run dev -w @mediaos/web\"",
+    "build": "npm run build -w @mediaos/web && npm run build -w @mediaos/api && npm run build -w @mediaos/workers && npm run build -w @mediaos/adapters",
     "start": "node packages/api/dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -45,8 +45,8 @@
     "type-check": "tsc --noEmit",
     "clean": "rimraf packages/*/dist packages/*/node_modules node_modules",
     "prepare": "husky install",
-    "db:migrate": "node packages/api/dist/scripts/migrate.js",
-    "db:seed": "node packages/api/dist/scripts/seed.js",
+    "db:migrate": "npm run db:migrate -w @mediaos/api",
+    "db:seed": "npm run db:seed -w @mediaos/api",
     "docker:build": "docker build -t mediaos:latest .",
     "docker:dev": "docker compose -f docker-compose.dev.yml up -d",
     "docker:prod": "docker compose up -d"
