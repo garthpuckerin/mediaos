@@ -1,35 +1,91 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import formbody from '@fastify/formbody';
-import fastifyStatic from '@fastify/static';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
+// Load environment variables
 dotenv.config();
-const __dirname = fileURLToPath(new URL('.', import.meta.url));
-const app = Fastify({ logger: true });
-await app.register(cors, { origin: true });
-await app.register(formbody);
 
-// static (serve built web if exists)
-const webDist = join(__dirname, '../../web/dist');
+// Create Fastify instance
+const app = Fastify({
+  logger: {
+    level: process.env.LOG_LEVEL || 'info'
+  }
+});
+
+// CORS configuration
+await app.register(cors, {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.ALLOWED_ORIGINS?.split(',') || false
+    : true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
+});
+
+// Health check endpoint
+app.get('/api/system/health', async (request, reply) => {
+  return {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    version: process.env.npm_package_version || '0.1.0',
+    environment: process.env.NODE_ENV || 'development'
+  };
+});
+
+// System info endpoint
+app.get('/api/system/info', async (request, reply) => {
+  return {
+    name: 'MediaOS',
+    version: process.env.npm_package_version || '0.1.0',
+    description: 'Unified media management platform',
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version,
+    platform: process.platform,
+    arch: process.arch
+  };
+});
+
+// Error handling
+app.setErrorHandler(async (error, request, reply) => {
+  app.log.error(error);
+  
+  const statusCode = error.statusCode || 500;
+  const message = statusCode === 500 ? 'Internal Server Error' : error.message;
+  
+  reply.code(statusCode).send({
+    error: true,
+    message,
+    statusCode,
+    timestamp: new Date().toISOString(),
+    path: request.url
+  });
+});
+
+// Start server
+const port = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '0.0.0.0';
+
 try {
-  await app.register(fastifyStatic, { root: webDist, prefix: '/' });
-  app.log.info('Static UI enabled:', webDist);
-} catch (e) {
-  app.log.warn('Static UI not available yet.');
+  await app.listen({ port, host });
+  app.log.info(`Server listening on http://${host}:${port}`);
+} catch (error) {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 }
 
-// health
-app.get('/api/system/health', async () => ({ ok: true }));
+// Graceful shutdown
+const gracefulShutdown = async (signal: string) => {
+  app.log.info(`Received ${signal}, shutting down gracefully`);
+  try {
+    await app.close();
+    process.exit(0);
+  } catch (error) {
+    console.error('Error during shutdown:', error);
+    process.exit(1);
+  }
+};
 
-// routes
-import routes from './routes/index.js';
-await app.register(routes, { prefix: '/api' });
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-const port = Number(process.env.PORT || 8080);
-app.listen({ port, host: '0.0.0.0' }).catch((err) => {
-  app.log.error(err);
-  process.exit(1);
-});
+export default app;
