@@ -134,6 +134,7 @@ pnpm test:e2e
 - [Development Setup](DEVELOPMENT.md) - Development environment guide
 - [AI Guardrails](AI_GUARDRAILS.md) - AI development standards and protocols
 - [Branch Management](BRANCH_MANAGEMENT.md) - Git workflow and branch strategy
+- [Sprint Planning & Roadmap](SPRINT_PLANNING.md) - Development sprints and milestones
 - [Changelog](CHANGELOG.md) - Version history and changes
 
 ## 🔒 Security
