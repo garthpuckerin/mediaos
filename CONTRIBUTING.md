@@ -66,6 +66,8 @@ This project adheres to a code of conduct. By participating, you are expected to
 - **Hotfix branches:** Create from `main` for critical fixes
 - **Release branches:** Create from `develop` for releases
 
+**Branch Protection:** All branches have protection rules requiring reviews and status checks. See [Branch Management](BRANCH_MANAGEMENT.md) for detailed protocols.
+
 ### Branch Naming Convention
 
 - `feature/description` - New features
@@ -202,14 +204,18 @@ pnpm test:e2e
    ```
 
 2. **Update Documentation**
-   - Update relevant documentation
+   - Update relevant documentation (mandatory per AI guardrails)
    - Add/update API documentation
    - Update README if needed
+   - Ensure documentation synchronization
 
 3. **Test Your Changes**
    - Test locally
    - Ensure all tests pass
    - Test edge cases
+   - Verify documentation accuracy
+
+**AI Guardrails Compliance:** All changes must follow our [AI Guardrails](AI_GUARDRAILS.md) including systematic root cause analysis and documentation synchronization.
 
 ### PR Requirements
 

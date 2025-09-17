@@ -132,6 +132,8 @@ pnpm test:e2e
 - [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
 - [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
 - [Development Setup](DEVELOPMENT.md) - Development environment guide
+- [AI Guardrails](AI_GUARDRAILS.md) - AI development standards and protocols
+- [Branch Management](BRANCH_MANAGEMENT.md) - Git workflow and branch strategy
 - [Changelog](CHANGELOG.md) - Version history and changes
 
 ## 🔒 Security

@@ -63,9 +63,12 @@ docker compose -f docker-compose.dev.yml up -d
 ## Contributing
 1. Create feature branch from `feature/2.2`
 2. Make changes with tests
-3. Run quality checks: `pnpm lint && pnpm test && pnpm type-check`
-4. Commit with conventional commits
-5. Create pull request for review
+3. Update documentation (mandatory per AI guardrails)
+4. Run quality checks: `pnpm lint && pnpm test && pnpm type-check`
+5. Commit with conventional commits
+6. Create pull request for review
+
+**Important:** All changes must follow our [AI Guardrails](AI_GUARDRAILS.md) and [Branch Management](BRANCH_MANAGEMENT.md) protocols.
 
 ## Architecture
 - **Monorepo:** pnpm workspaces

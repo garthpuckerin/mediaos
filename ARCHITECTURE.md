@@ -29,6 +29,8 @@ MediaOS is a unified media management platform built as a monorepo with a modern
 - **Testing:** Vitest (unit), Playwright (E2E)
 - **Quality Gates:** Husky + lint-staged
 - **CI/CD:** GitHub Actions
+- **Branch Management:** Comprehensive Git workflow with protection rules
+- **AI Guardrails:** Systematic development protocols and documentation sync
 
 ## Package Structure
 
