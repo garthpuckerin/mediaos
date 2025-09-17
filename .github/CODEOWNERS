@@ -1,0 +1,50 @@
+# MediaOS Code Owners
+
+# Global owners - all files
+* @mediaos-team
+
+# API package - backend team
+packages/api/ @api-team @backend-team
+
+# Web package - frontend team  
+packages/web/ @frontend-team @ui-team
+
+# Workers package - backend team
+packages/workers/ @backend-team @workers-team
+
+# Adapters package - integration team
+packages/adapters/ @integration-team @adapters-team
+
+# Database - database team
+db/ @database-team @backend-team
+
+# Documentation - documentation team
+*.md @docs-team @mediaos-team
+docs/ @docs-team
+
+# CI/CD and GitHub workflows - DevOps team
+.github/ @devops-team @ci-team
+
+# Docker and deployment - DevOps team
+Dockerfile @devops-team
+docker-compose*.yml @devops-team
+
+# Configuration files - platform team
+package.json @platform-team
+pnpm-workspace.yaml @platform-team
+tsconfig.json @platform-team
+.eslintrc.json @platform-team
+.prettierrc.json @platform-team
+
+# Testing configuration - QA team
+vitest.config.ts @qa-team
+playwright.config.ts @qa-team
+test/ @qa-team
+
+# Security and compliance - security team
+AI_GUARDRAILS.md @security-team
+.github/workflows/ @security-team @devops-team
+
+# Branch management - platform team
+BRANCH_MANAGEMENT.md @platform-team
+.github/BRANCH_PROTECTION.md @platform-team
