@@ -1,0 +1,48 @@
+# Prettier ignore patterns
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Generated files
+*.min.js
+*.min.css
+
+# Package files
+*.tgz
+*.tar.gz
+
+# Lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+
+# Config files that should maintain their formatting
+*.config.js
+*.config.ts
