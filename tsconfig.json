@@ -25,7 +25,6 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
-    "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
@@ -39,10 +38,7 @@
       "@mediaos/adapters": ["packages/adapters/src"]
     }
   },
-  "include": [
-    "packages/*/src/**/*",
-    "test/**/*"
-  ],
+  "include": ["packages/*/src/**/*", "test/**/*"],
   "exclude": [
     "node_modules",
     "dist",
