@@ -101,7 +101,7 @@ docker compose up -d
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+See [contributing.md](contributing.md) for detailed contribution guidelines.
 
 ## License
 

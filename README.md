@@ -128,11 +128,11 @@ pnpm test:e2e
 
 ## 📚 Documentation
 
-- [Product Requirements Document](PRD.md) - Complete feature specifications
-- [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
-- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
-- [Development Setup](DEVELOPMENT.md) - Development environment guide
-- [Changelog](CHANGELOG.md) - Version history and changes
+- [Product Requirements Document](prd.md) - Complete feature specifications
+- [Architecture Documentation](architecture.md) - Technical architecture details
+- [Contributing Guidelines](contributing.md) - How to contribute
+- [Development Setup](development.md) - Development environment guide
+- [Changelog](changelog.md) - Version history and changes
 
 ## 🔒 Security
 
@@ -152,7 +152,7 @@ pnpm test:e2e
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guidelines](contributing.md) for details.
 
 1. Fork the repository
 2. Create a feature branch from `feature/2.2`
