@@ -1,8 +1,8 @@
 import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
 
 // Mock environment variables
-process.env.NODE_ENV = 'test';
-process.env.LOG_LEVEL = 'error';
+process.env['NODE_ENV'] = 'test';
+process.env['LOG_LEVEL'] = 'error';
 
 // Global test setup
 beforeAll(async () => {
