@@ -15,9 +15,9 @@ describe('DB Migration Integration', () => {
   });
 
   afterAll(async () => {
-    try {
+    if (fs.existsSync(dbPath)) {
       fs.unlinkSync(dbPath);
-    } catch {}
+    }
   });
 
   it('creates media_items table', async () => {
