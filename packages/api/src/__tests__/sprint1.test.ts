@@ -1,24 +1,25 @@
+import Fastify from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import Fastify, { FastifyInstance } from 'fastify';
 
 describe('Sprint 1 - Basic API Server', () => {
   let app: FastifyInstance;
 
   beforeEach(async () => {
     app = Fastify({ logger: false });
-    
+
     // Register basic routes
-    app.get('/api/system/health', async (request, reply) => {
+    app.get('/api/system/health', async (_request, _reply) => {
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         version: '0.1.0',
-        environment: 'test'
+        environment: 'test',
       };
     });
 
-    app.get('/api/system/info', async (request, reply) => {
+    app.get('/api/system/info', async (_request, _reply) => {
       return {
         name: 'MediaOS',
         version: '0.1.0',
@@ -26,7 +27,7 @@ describe('Sprint 1 - Basic API Server', () => {
         environment: 'test',
         nodeVersion: process.version,
         platform: process.platform,
-        arch: process.arch
+        arch: process.arch,
       };
     });
 
@@ -41,7 +42,7 @@ describe('Sprint 1 - Basic API Server', () => {
     it('should return health status', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/system/health'
+        url: '/api/system/health',
       });
 
       expect(response.statusCode).toBe(200);
@@ -56,7 +57,7 @@ describe('Sprint 1 - Basic API Server', () => {
     it('should return system information', async () => {
       const response = await app.inject({
         method: 'GET',
-        url: '/api/system/info'
+        url: '/api/system/info',
       });
 
       expect(response.statusCode).toBe(200);

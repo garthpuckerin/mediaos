@@ -1,4 +1,5 @@
-import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+
 import { setupTestDatabase, cleanupTestDatabase } from './helpers/database';
 import { setupTestServer, cleanupTestServer } from './helpers/server';
 
@@ -26,15 +27,15 @@ afterEach(async () => {
 });
 
 // Mock external services in test environment
-if (process.env.NODE_ENV === 'test') {
+if (process.env['NODE_ENV'] === 'test') {
   // Mock external API calls
-  global.fetch = vi.fn();
-  
+  (global as any).fetch = vi.fn();
+
   // Mock file system operations
   vi.mock('fs/promises', () => ({
     readFile: vi.fn(),
     writeFile: vi.fn(),
     mkdir: vi.fn(),
-    rm: vi.fn()
+    rm: vi.fn(),
   }));
 }

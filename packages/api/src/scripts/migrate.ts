@@ -1,9 +1,4 @@
 import sqlite3 from 'sqlite3';
-import { readFileSync, existsSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export interface DatabaseConfig {
   url: string;
@@ -40,9 +35,12 @@ export class DatabaseMigrator {
     }
   }
 
-  private runAsync(sql: string, params: any[] = []): Promise<any> {
+  private runAsync(
+    sql: string,
+    params: unknown[] = []
+  ): Promise<{ lastID: number; changes: number }> {
     return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function(err) {
+      this.db.run(sql, params, function (err) {
         if (err) reject(err);
         else resolve({ lastID: this.lastID, changes: this.changes });
       });
@@ -61,9 +59,9 @@ export class DatabaseMigrator {
 
 export async function migrate(): Promise<void> {
   const config: DatabaseConfig = {
-    url: process.env.DATABASE_URL || './config/mediaos.db',
+    url: process.env['DATABASE_URL'] || './config/mediaos.db',
     createTables: true,
-    seedData: false
+    seedData: false,
   };
 
   const migrator = new DatabaseMigrator(config);
