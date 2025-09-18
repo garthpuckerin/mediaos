@@ -21,45 +21,42 @@ MediaOS is a unified, single-container media management platform that replaces t
 ## 📋 Prerequisites
 
 - **Node.js** 18+ (LTS recommended)
-- **pnpm** 8+ (package manager)
+- **npm** 9+ (package manager)
 - **Docker** (for containerized deployment)
 - **Git** (for version control)
 
 ## 🛠️ Quick Start
 
-### Development Setup
+### Development Setup (npm)
 
 ```bash
 # 1) Clone repository
 git clone https://github.com/mediaos/mediaos.git
 cd mediaos
 
-# 2) Enable pnpm
-corepack enable
-
-# 3) Install dependencies
-pnpm install
+# 2) Install dependencies
+npm install
 
 # 4) Setup environment
 cp env.example .env
 # Edit .env with your configuration
 
 # 5) Setup database
-pnpm db:migrate
-pnpm db:seed
+npm run db:migrate
+npm run db:seed
 
 # 6) Start development servers
-pnpm dev
+npm run dev
 ```
 
-### Production Build
+### Production Build (npm)
 
 ```bash
 # Build all packages
-pnpm build
+npm run build
 
 # Start production server
-pnpm start
+npm start
 ```
 
 ### Docker Deployment
@@ -93,32 +90,32 @@ test/
 
 ```bash
 # Run all tests
-pnpm test
+npm test
 
 # Run tests in watch mode
-pnpm test:watch
+npm run test:watch
 
 # Run with coverage
-pnpm test:coverage
+npm run test:coverage
 
 # Run E2E tests
-pnpm test:e2e
+npm run test:e2e
 ```
 
 ## 🔧 Development Scripts
 
 | Command | Description |
 |---------|-------------|
-| `pnpm dev` | Start development servers |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run unit tests |
-| `pnpm test:e2e` | Run E2E tests |
-| `pnpm lint` | Run ESLint |
-| `pnpm lint:fix` | Fix ESLint issues |
-| `pnpm format` | Format code with Prettier |
-| `pnpm type-check` | Run TypeScript type checking |
-| `pnpm db:migrate` | Run database migrations |
-| `pnpm db:seed` | Seed database with sample data |
+| `npm run dev` | Start development servers |
+| `npm run build` | Build all packages |
+| `npm test` | Run unit tests |
+| `npm run test:e2e` | Run E2E tests |
+| `npm run lint` | Run ESLint |
+| `npm run lint:fix` | Fix ESLint issues |
+| `npm run format` | Format code with Prettier |
+| `npm run type-check` | Run TypeScript type checking |
+| `npm run db:migrate` | Run database migrations |
+| `npm run db:seed` | Seed database with sample data |
 
 ## 🐳 Docker Volumes (Synology)
 
@@ -128,11 +125,11 @@ pnpm test:e2e
 
 ## 📚 Documentation
 
-- [Product Requirements Document](PRD.md) - Complete feature specifications
-- [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
-- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
-- [Development Setup](DEVELOPMENT.md) - Development environment guide
-- [Changelog](CHANGELOG.md) - Version history and changes
+- [Product Requirements Document](prd.md) - Complete feature specifications
+- [Architecture Documentation](architecture.md) - Technical architecture details
+- [Contributing Guidelines](contributing.md) - How to contribute
+- [Development Setup](development.md) - Development environment guide
+- [Changelog](changelog.md) - Version history and changes
 
 ## 🔒 Security
 
@@ -152,12 +149,12 @@ pnpm test:e2e
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
+We welcome contributions! Please see our [Contributing Guidelines](contributing.md) for details.
 
 1. Fork the repository
-2. Create a feature branch from `feature/2.2`
+2. Create a feature branch from the latest sprint branch
 3. Make your changes with tests
-4. Run quality checks: `pnpm lint && pnpm test && pnpm type-check`
+4. Run quality checks: `npm run lint && npm test && npm run type-check`
 5. Commit with conventional commits
 6. Create a pull request
 

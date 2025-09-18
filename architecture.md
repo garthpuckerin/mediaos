@@ -17,7 +17,7 @@ MediaOS is a unified media management platform built as a monorepo with a modern
 ### Core Technologies
 - **Runtime:** Node.js 18+ (LTS)
 - **Language:** TypeScript 5.6+
-- **Package Manager:** pnpm 8+
+- **Package Manager:** npm 9+
 - **API Framework:** Fastify 4+
 - **Frontend:** React 18+ with Vite
 - **Database:** SQLite (default), PostgreSQL (optional)
@@ -65,7 +65,7 @@ src/
 │   └── settings.ts    # Configuration
 ├── services/          # Business logic
 ├── models/            # Data models
-├── middleware/         # Express middleware
+├── middleware/         # Server middleware
 ├── utils/             # Utility functions
 └── types/             # TypeScript definitions
 ```

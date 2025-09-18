@@ -315,7 +315,7 @@ For feature requests, please include:
 
 1. **Version Bumping**
    - Update version in package.json
-   - Update CHANGELOG.md
+   - Update changelog.md
    - Create release PR
 
 2. **Testing**
