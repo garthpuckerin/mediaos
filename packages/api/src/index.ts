@@ -5,6 +5,18 @@ import sensible from '@fastify/sensible';
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
 
+import artworkRoutes from './routes/artwork';
+import dashboardRoutes from './routes/dashboard';
+import downloadsRoutes from './routes/downloads';
+import filesRoutes from './routes/files';
+import settingsRoutes from './routes/settings';
+import indexersRoutes from './routes/indexers';
+import jobsRoutes from './routes/jobs';
+import libraryRoutes from './routes/library';
+import requestsRoutes from './routes/requests';
+import subtitlesRoutes from './routes/subtitles';
+import { migrate } from './scripts/migrate';
+
 // Load environment variables
 dotenv.config();
 
@@ -78,10 +90,21 @@ const port = Number(process.env['PORT'] || 3000);
 const host = process.env['HOST'] || '0.0.0.0';
 
 try {
+  await migrate();
+  await app.register(libraryRoutes);
+  await app.register(requestsRoutes);
+  await app.register(indexersRoutes);
+  await app.register(jobsRoutes);
+  await app.register(downloadsRoutes);
+  await app.register(filesRoutes);
+  await app.register(settingsRoutes);
+  await app.register(artworkRoutes);
+  await app.register(subtitlesRoutes);
+  await app.register(dashboardRoutes);
   await app.listen({ port, host });
   app.log.info(`Server listening on http://${host}:${port}`);
 } catch (error) {
-  console.error('Failed to start server:', error);
+  app.log.error({ err: error }, 'Failed to start server');
   process.exit(1);
 }
 
@@ -92,7 +115,7 @@ const gracefulShutdown = async (signal: string) => {
     await app.close();
     process.exit(0);
   } catch (error) {
-    console.error('Error during shutdown:', error);
+    app.log.error({ err: error }, 'Error during shutdown');
     process.exit(1);
   }
 };
