@@ -1,0 +1,20 @@
+﻿# CODEOWNERS
+# NOTE: Update the team handles below to match your GitHub org/teams.
+# Lines starting with '#' are comments.
+
+# Default owners for everything
+* @your-org/maintainers
+
+# Package ownership
+packages/api/       @your-org/api @your-org/maintainers
+packages/web/       @your-org/web @your-org/maintainers
+packages/workers/   @your-org/workers @your-org/maintainers
+packages/shared/    @your-org/core @your-org/maintainers
+
+# Ops / CI
+.github/            @your-org/devops @your-org/maintainers
+scripts/            @your-org/devops @your-org/maintainers
+
+# Documentation
+docs/               @your-org/docs @your-org/maintainers
+*.md                @your-org/docs @your-org/maintainers

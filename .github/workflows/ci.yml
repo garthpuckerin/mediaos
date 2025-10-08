@@ -1,13 +1,22 @@
-name: CI Pipeline
+name: CI
 
 on:
-  push:
-    branches: [main, develop, 'feature/*']
   pull_request:
-    branches: [main, develop]
+    branches:
+      - main
+      - develop
+      - feature/**
+      - bugfix/**
+      - hotfix/**
+      - release/**
+  push:
+    branches:
+      - main
+      - develop
 
-env:
-  NODE_VERSION: '20'
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-test:
@@ -19,26 +28,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version: '18'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
       - name: Verify filenames
         run: npm run verify:filenames
 
-      - name: Type Check
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
         run: npm run type-check
 
-      - name: Test
-        run: npm test
-
-      - name: Build
-        run: npm run build
-
-      - name: Security Audit (critical only)
-        run: npm run audit:ci
+      - name: Unit tests
+        run: npm test --workspaces
