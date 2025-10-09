@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/usr/bin/env sh
 . "$(dirname "$0")/_/husky.sh"
 
-npm run verify:filenames && npm run lint && npm run type-check && npm test
+# Package-aware pre-push: verify names, then lint/type-check/tests only for affected workspaces
+npm run -s prepush
+
