@@ -668,6 +668,8 @@ function LibraryList({ kind }: { kind: KindKey }) {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const gridRef = React.useRef<HTMLDivElement | null>(null);
+  const [cols, setCols] = React.useState<number | null>(null);
 
   const toSingular = (k: KindKey) =>
     k === 'movies' ? 'movie' : k === 'books' ? 'book' : k;
@@ -705,45 +707,115 @@ function LibraryList({ kind }: { kind: KindKey }) {
     };
   }, [kind]);
 
+  // Force 9 columns on wide screens to eliminate end-of-row gap
+  React.useEffect(() => {
+    const el = gridRef.current;
+    const RO: any = (window as any).ResizeObserver;
+    if (!el || typeof RO === 'undefined') return;
+    const gap = 12; // keep in sync with grid gap
+    const ro = new RO((entries: any) => {
+      const w = entries[0]?.contentRect?.width ?? el.clientWidth;
+      const threshold = 220 * 9 + gap * 8; // ≈ 2076 px
+      setCols(w >= threshold ? 9 : null);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const SkeletonCard = () => (
+    <div
+      aria-hidden
+      style={{
+        border: '1px solid #1f2937',
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: '#0b1220',
+      }}
+    >
+      <div
+        style={{
+          height: 300,
+          background:
+            'linear-gradient(90deg, #111827 0%, #0f172a 50%, #111827 100%)',
+        }}
+      />
+      <div
+        style={{
+          padding: 10,
+          height: 16,
+          background:
+            'linear-gradient(90deg, #0f172a 0%, #0b1220 50%, #0f172a 100%)',
+        }}
+      />
+    </div>
+  );
+
+  const renderCard = (it: any) => {
+    const poster = typeof it.posterUrl === 'string' ? it.posterUrl : null;
+    return (
+      <div
+        key={it.id}
+        style={{
+          border: '1px solid #1f2937',
+          borderRadius: 12,
+          overflow: 'hidden',
+          background: '#0b1220',
+        }}
+      >
+        <div
+          style={{
+            height: 300,
+            background: poster ? 'transparent' : '#111827',
+            display: 'grid',
+            placeItems: 'center',
+          }}
+        >
+          {poster ? (
+            <img
+              src={poster}
+              alt={it.title || 'Poster'}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                (
+                  e.currentTarget.parentElement as HTMLElement
+                ).style.background = '#111827';
+              }}
+            />
+          ) : (
+            <span style={{ color: '#9aa4b2' }}>No artwork</span>
+          )}
+        </div>
+        <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
+      </div>
+    );
+  };
+
+  const skeletonCount = 10;
+
   return (
     <section>
       {error && <div style={{ color: '#f87171' }}>{error}</div>}
       <div
+        ref={gridRef}
         style={{
           display: 'grid',
           gap: 12,
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gridTemplateColumns: cols
+            ? `repeat(${cols}, minmax(0, 1fr))`
+            : 'repeat(auto-fill, minmax(220px, 1fr))',
         }}
       >
-        {loading && (
-          <div style={{ gridColumn: '1 / -1', color: '#9aa4b2' }}>Loading…</div>
-        )}
+        {loading &&
+          Array.from({ length: cols ? cols * 2 : skeletonCount }).map(
+            (_, i) => <SkeletonCard key={i} />
+          )}
         {!loading &&
-          items.map((it) => (
-            <div
-              key={it.id}
-              style={{
-                border: '1px solid #1f2937',
-                borderRadius: 12,
-                overflow: 'hidden',
-                background: '#0b1220',
-              }}
-            >
-              <div
-                style={{
-                  height: 300,
-                  background: '#111827',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#9aa4b2',
-                }}
-              >
-                Artwork
-              </div>
-              <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
-            </div>
-          ))}
+          items.length === 0 &&
+          Array.from({
+            length: Math.max(6, cols ? cols : skeletonCount - 2),
+          }).map((_, i) => <SkeletonCard key={i} />)}
+        {!loading && items.length > 0 && items.map(renderCard)}
       </div>
     </section>
   );

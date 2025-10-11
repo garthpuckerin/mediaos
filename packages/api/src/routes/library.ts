@@ -11,9 +11,11 @@ const plugin: FastifyPluginAsync = async (app) => {
     const schema = z.object({
       kind: z.enum(['movie', 'series', 'music', 'book']),
       title: z.string(),
+      posterUrl: z.string().url().optional(),
+      backgroundUrl: z.string().url().optional(),
     });
     const data = schema.parse(req.body);
-    const item = { id: Date.now().toString(), ...data };
+    const item = { id: Date.now().toString(), ...data } as any;
     library.push(item);
     return { ok: true, item };
   });
