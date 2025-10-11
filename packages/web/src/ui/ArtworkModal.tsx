@@ -60,7 +60,9 @@ export function ArtworkModal({
             detail: { title, tab, url: selected },
           })
         );
-      } catch {}
+      } catch (_e) {
+        /* ignore */
+      }
     } finally {
       onClose();
     }

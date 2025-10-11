@@ -738,7 +738,9 @@ function LibraryList({
               : it
           )
         );
-      } catch {}
+      } catch (_e) {
+        /* ignore */
+      }
     };
     window.addEventListener('library:changed', handler as any);
     return () => window.removeEventListener('library:changed', handler as any);
@@ -790,43 +792,55 @@ function LibraryList({
   const renderCard = (it: any) => {
     const poster = typeof it.posterUrl === 'string' ? it.posterUrl : null;
     return (
-      <div
+      <button
+        type="button"
         key={it.id}
+        onClick={() => onOpenArtwork(it.title || '')}
         style={{
-          border: '1px solid #1f2937',
-          borderRadius: 12,
-          overflow: 'hidden',
-          background: '#0b1220',
+          display: 'block',
+          width: '100%',
+          padding: 0,
+          background: 'transparent',
+          border: 'none',
+          textAlign: 'inherit',
           cursor: 'pointer',
         }}
-        onClick={() => onOpenArtwork(it.title || '')}
       >
         <div
           style={{
-            height: 300,
-            background: poster ? 'transparent' : '#111827',
-            display: 'grid',
-            placeItems: 'center',
+            border: '1px solid #1f2937',
+            borderRadius: 12,
+            overflow: 'hidden',
+            background: '#0b1220',
           }}
         >
-          {poster ? (
-            <img
-              src={poster}
-              alt={it.title || 'Poster'}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                (
-                  e.currentTarget.parentElement as HTMLElement
-                ).style.background = '#111827';
-              }}
-            />
-          ) : (
-            <span style={{ color: '#9aa4b2' }}>No artwork</span>
-          )}
+          <div
+            style={{
+              height: 300,
+              background: poster ? 'transparent' : '#111827',
+              display: 'grid',
+              placeItems: 'center',
+            }}
+          >
+            {poster ? (
+              <img
+                src={poster}
+                alt={it.title || 'Poster'}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                  (
+                    e.currentTarget.parentElement as HTMLElement
+                  ).style.background = '#111827';
+                }}
+              />
+            ) : (
+              <span style={{ color: '#9aa4b2' }}>No artwork</span>
+            )}
+          </div>
+          <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
         </div>
-        <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
-      </div>
+      </button>
     );
   };
 
