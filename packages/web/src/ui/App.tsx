@@ -138,11 +138,7 @@ export default function App() {
     { key: 'books', label: 'Books' },
     { key: 'music', label: 'Music' },
   ];
-  const libraryPages = [
-    { key: 'list', label: 'List' },
-    { key: 'add', label: 'Add New' },
-    { key: 'import', label: 'Library Import' },
-  ];
+  // Removed page-level tabs (List/Add/Import) from the subnav; Add/Import now live in the left nav.
   const activitySubs = [
     { key: 'queue', label: 'Queue' },
     { key: 'history', label: 'History' },
@@ -164,42 +160,38 @@ export default function App() {
       const currentKind: KindKey = route.kind ?? 'series';
       const currentPage: string = route.page ?? 'list';
       return (
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ marginBottom: 8 }}>
-            {libraryKinds.map((k) => (
-              <a
-                key={k.key}
-                href={`#/${route.top}/${k.key}/${currentPage}`}
-                style={{
-                  ...subNavItemStyle,
-                  background: currentKind === k.key ? '#111827' : 'transparent',
-                  border:
-                    '1px solid ' +
-                    (currentKind === k.key ? '#334155' : '#1f2937'),
-                }}
-              >
-                {k.label}
-              </a>
-            ))}
+        <>
+          <div
+            style={{
+              position: 'sticky',
+              top: 0,
+              background: '#0b0f16',
+              borderBottom: '1px solid #1f2937',
+              padding: '8px 0',
+              zIndex: 9,
+            }}
+          >
+            <div style={{ marginBottom: 8 }}>
+              {libraryKinds.map((k) => (
+                <a
+                  key={k.key}
+                  href={`#/${route.top}/${k.key}/${currentPage}`}
+                  style={{
+                    ...subNavItemStyle,
+                    background:
+                      currentKind === k.key ? '#111827' : 'transparent',
+                    border:
+                      '1px solid ' +
+                      (currentKind === k.key ? '#334155' : '#1f2937'),
+                  }}
+                >
+                  {k.label}
+                </a>
+              ))}
+            </div>
           </div>
-          <div>
-            {libraryPages.map((p) => (
-              <a
-                key={p.key}
-                href={`#/${route.top}/${currentKind}/${p.key}`}
-                style={{
-                  ...subNavItemStyle,
-                  background: currentPage === p.key ? '#111827' : 'transparent',
-                  border:
-                    '1px solid ' +
-                    (currentPage === p.key ? '#334155' : '#1f2937'),
-                }}
-              >
-                {p.label}
-              </a>
-            ))}
-          </div>
-        </div>
+          {/* Page-level tabs removed; actions moved to left nav */}
+        </>
       );
     }
     const subs =
@@ -250,23 +242,14 @@ export default function App() {
     }
     return (
       <section>
-        <h2>{kindLabel}</h2>
-        <p style={{ color: '#9aa4b2' }}>
-          No {kindLabel.toLowerCase()} yet. Use Add New or Library Import.
-        </p>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            style={buttonStyle}
-            onClick={() => setHash(`#/library/${kind}/add`)}
-          >
-            Add New
-          </button>
-          <button
-            style={buttonStyle}
-            onClick={() => setHash(`#/library/${kind}/import`)}
-          >
-            Library Import
-          </button>
+        <div
+          style={{
+            display: 'grid',
+            gap: 12,
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          }}
+        >
+          {/* Artwork items render here */}
         </div>
       </section>
     );
@@ -505,13 +488,21 @@ export default function App() {
       style={{
         fontFamily: 'Inter, system-ui, sans-serif',
         color: '#e5e7eb',
-        background: '#0b0f16',
-        minHeight: '100vh',
+        background: '#0b1220',
+        position: 'fixed',
+        inset: 0,
+        margin: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
     >
       <div
         style={{
-          padding: '14px',
+          height: 48,
+          padding: '0 14px',
+          display: 'flex',
+          alignItems: 'center',
           borderBottom: '1px solid #1f2937',
           background: '#0f172a',
           position: 'sticky',
@@ -527,8 +518,9 @@ export default function App() {
           display: 'grid',
           gridTemplateColumns: '220px 1fr',
           gap: 16,
-          maxWidth: 1200,
-          margin: '0 auto',
+          width: '100%',
+          flex: 1,
+          overflow: 'hidden',
         }}
       >
         <aside
@@ -536,15 +528,116 @@ export default function App() {
             padding: 16,
             borderRight: '1px solid #1f2937',
             background: '#0b1220',
-            minHeight: 'calc(100vh - 48px)',
-            position: 'sticky',
-            top: 48,
+            height: '100%',
+            overflow: 'hidden',
           }}
         >
           <div style={navContainerStyle}>
+            {/* Library top-level */}
+            <a
+              href="#/library"
+              style={{
+                ...navItemStyle,
+                background: route.top === 'library' ? '#111827' : 'transparent',
+                border:
+                  '1px solid ' +
+                  (route.top === 'library' ? '#334155' : '#1f2937'),
+              }}
+            >
+              Library
+            </a>
+            {/* Library nested items (visible when Library is active) */}
+            {route.top === 'library' && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 6,
+                  marginTop: 4,
+                  marginLeft: 8,
+                }}
+              >
+                <a
+                  href="#/library"
+                  style={{
+                    ...navItemStyle,
+                    padding: '8px 10px',
+                    background:
+                      (window.location.hash || '') === '#/library'
+                        ? '#111827'
+                        : 'transparent',
+                    border:
+                      '1px solid ' +
+                      ((window.location.hash || '') === '#/library'
+                        ? '#334155'
+                        : '#1f2937'),
+                  }}
+                >
+                  Library (main)
+                </a>
+                {(
+                  [
+                    { key: 'series', label: 'Series' },
+                    { key: 'movies', label: 'Movies' },
+                    { key: 'books', label: 'Books' },
+                    { key: 'music', label: 'Music' },
+                  ] as { key: KindKey; label: string }[]
+                ).map((k) => (
+                  <a
+                    key={k.key}
+                    href={`#/library/${k.key}/list`}
+                    style={{
+                      ...navItemStyle,
+                      padding: '8px 10px',
+                      background:
+                        route.kind === k.key ? '#111827' : 'transparent',
+                      border:
+                        '1px solid ' +
+                        (route.kind === k.key ? '#334155' : '#1f2937'),
+                    }}
+                  >
+                    {k.label}
+                  </a>
+                ))}
+                {(() => {
+                  const currentKind: KindKey = route.kind ?? 'series';
+                  const isAdd = route.page === 'add';
+                  const isImport = route.page === 'import';
+                  return (
+                    <>
+                      <a
+                        href={`#/library/${currentKind}/add`}
+                        style={{
+                          ...navItemStyle,
+                          padding: '8px 10px',
+                          background: isAdd ? '#111827' : 'transparent',
+                          border:
+                            '1px solid ' + (isAdd ? '#334155' : '#1f2937'),
+                        }}
+                      >
+                        Add New
+                      </a>
+                      <a
+                        href={`#/library/${currentKind}/import`}
+                        style={{
+                          ...navItemStyle,
+                          padding: '8px 10px',
+                          background: isImport ? '#111827' : 'transparent',
+                          border:
+                            '1px solid ' + (isImport ? '#334155' : '#1f2937'),
+                        }}
+                      >
+                        Library Import
+                      </a>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* Other sections */}
             {(
               [
-                { key: 'library', label: 'Library' },
                 { key: 'calendar', label: 'Calendar' },
                 { key: 'activity', label: 'Activity' },
                 { key: 'settings', label: 'Settings' },
@@ -568,7 +661,7 @@ export default function App() {
             ))}
           </div>
         </aside>
-        <main style={{ padding: 16 }}>
+        <main style={{ padding: 16, height: '100%', overflowY: 'auto' }}>
           {renderSubnav()}
           {route.top === 'library' && renderLibrary()}
           {route.top === 'calendar' && renderCalendar()}
