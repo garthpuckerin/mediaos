@@ -20,6 +20,20 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, item };
   });
 
+  app.post('/api/library/artwork', async (req) => {
+    const schema = z.object({
+      title: z.string(),
+      tab: z.enum(['poster', 'background', 'banner', 'season']).optional(),
+      url: z.string().url(),
+    });
+    const { title, tab = 'poster', url } = schema.parse(req.body);
+    const it = library.find((x) => x.title === title);
+    if (!it) return { ok: false, error: 'not_found' };
+    if (tab === 'poster') (it as any).posterUrl = url;
+    if (tab === 'background') (it as any).backgroundUrl = url;
+    return { ok: true, item: it };
+  });
+
   // artwork lock/revert hooks will call into /artwork routes
 };
 

@@ -24,9 +24,9 @@ export function ArtworkModal({
   }, [open]);
 
   const pool = useMemo(() => {
-    // Placeholder pool; wire real data later
+    // Placeholder URL pool (replace with real provider later)
     const base = (txt: string) =>
-      `url(https://via.placeholder.com/300x450?text=${encodeURIComponent(txt)})`;
+      `https://via.placeholder.com/300x450?text=${encodeURIComponent(txt)}`;
     return {
       poster: { p1: base(`${title}+P1`), p2: base(`${title}+P2`) },
       background: { b1: base(`${title}+BG1`) },
@@ -40,13 +40,30 @@ export function ArtworkModal({
   const items = Object.entries(pool[tab]);
 
   const save = async () => {
-    if (!selected) return;
-    await fetch('/api/artwork/select', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, tab, key: selected, keep, lockOnSelect }),
-    });
-    onClose();
+    if (!selected || !title) return;
+    try {
+      await fetch('/api/artwork/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, tab, key: selected, keep, lockOnSelect }),
+      });
+      if (tab === 'poster' || tab === 'background') {
+        await fetch('/api/library/artwork', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, tab, url: selected }),
+        });
+      }
+      try {
+        (window as any).dispatchEvent(
+          new CustomEvent('library:changed', {
+            detail: { title, tab, url: selected },
+          })
+        );
+      } catch {}
+    } finally {
+      onClose();
+    }
   };
 
   const revert = async () => {
@@ -173,10 +190,10 @@ export function ArtworkModal({
                 No images. Add by URL coming soon.
               </div>
             ) : (
-              items.map(([key, bg]) => (
+              items.map(([key, url]) => (
                 <button
                   key={key}
-                  onClick={() => setSelected(key)}
+                  onClick={() => setSelected(url)}
                   aria-label={`select artwork ${key}`}
                   style={{
                     position: 'relative',
@@ -185,7 +202,7 @@ export function ArtworkModal({
                     border: '1px solid #1f2937',
                     background: '#0b1220',
                     overflow: 'hidden',
-                    outline: selected === key ? '2px solid #6366f1' : 'none',
+                    outline: selected === url ? '2px solid #6366f1' : 'none',
                     cursor: 'pointer',
                   }}
                 >
@@ -193,7 +210,7 @@ export function ArtworkModal({
                     style={{
                       position: 'absolute',
                       inset: 0,
-                      backgroundImage: bg,
+                      backgroundImage: `url(${url})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                     }}

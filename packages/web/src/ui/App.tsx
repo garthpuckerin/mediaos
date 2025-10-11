@@ -105,7 +105,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(parseHash());
   const [health, setHealth] = useState<string>('checking...');
   const [artOpen, setArtOpen] = useState(false);
-  const [title] = useState('Artwork');
+  const [artTitle, setArtTitle] = useState<string | null>(null);
   const [settings, setSettings] = useState<null | DownloaderSettingsResponse>(
     null
   );
@@ -237,7 +237,15 @@ export default function App() {
         />
       );
     }
-    return <LibraryList kind={kind} />;
+    return (
+      <LibraryList
+        kind={kind}
+        onOpenArtwork={(t) => {
+          setArtTitle(t);
+          setArtOpen(true);
+        }}
+      />
+    );
   };
 
   const renderCalendar = () => (
@@ -658,13 +666,19 @@ export default function App() {
       <ArtworkModal
         open={artOpen}
         onClose={() => setArtOpen(false)}
-        title={title}
+        title={artTitle || ''}
       />
     </div>
   );
 }
 
-function LibraryList({ kind }: { kind: KindKey }) {
+function LibraryList({
+  kind,
+  onOpenArtwork,
+}: {
+  kind: KindKey;
+  onOpenArtwork: (title: string) => void;
+}) {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -706,6 +720,29 @@ function LibraryList({ kind }: { kind: KindKey }) {
       cancelled = true;
     };
   }, [kind]);
+
+  // Refresh list when artwork changes
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const d = e.detail || {};
+        if (!d || !d.title) return;
+        setItems((prev) =>
+          prev.map((it) =>
+            it.title === d.title
+              ? {
+                  ...it,
+                  ...(d.tab === 'poster' ? { posterUrl: d.url } : {}),
+                  ...(d.tab === 'background' ? { backgroundUrl: d.url } : {}),
+                }
+              : it
+          )
+        );
+      } catch {}
+    };
+    window.addEventListener('library:changed', handler as any);
+    return () => window.removeEventListener('library:changed', handler as any);
+  }, []);
 
   // Force 9 columns on wide screens to eliminate end-of-row gap
   React.useEffect(() => {
@@ -760,7 +797,9 @@ function LibraryList({ kind }: { kind: KindKey }) {
           borderRadius: 12,
           overflow: 'hidden',
           background: '#0b1220',
+          cursor: 'pointer',
         }}
+        onClick={() => onOpenArtwork(it.title || '')}
       >
         <div
           style={{
