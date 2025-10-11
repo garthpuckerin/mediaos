@@ -668,6 +668,8 @@ function LibraryList({ kind }: { kind: KindKey }) {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const gridRef = React.useRef<HTMLDivElement | null>(null);
+  const [cols, setCols] = React.useState<number | null>(null);
 
   const toSingular = (k: KindKey) =>
     k === 'movies' ? 'movie' : k === 'books' ? 'book' : k;
@@ -704,6 +706,21 @@ function LibraryList({ kind }: { kind: KindKey }) {
       cancelled = true;
     };
   }, [kind]);
+
+  // Force 9 columns on wide screens to eliminate end-of-row gap
+  React.useEffect(() => {
+    const el = gridRef.current;
+    const RO: any = (window as any).ResizeObserver;
+    if (!el || typeof RO === 'undefined') return;
+    const gap = 12; // keep in sync with grid gap
+    const ro = new RO((entries: any) => {
+      const w = entries[0]?.contentRect?.width ?? el.clientWidth;
+      const threshold = 220 * 9 + gap * 8; // ≈ 2076 px
+      setCols(w >= threshold ? 9 : null);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const SkeletonCard = () => (
     <div
@@ -780,21 +797,24 @@ function LibraryList({ kind }: { kind: KindKey }) {
     <section>
       {error && <div style={{ color: '#f87171' }}>{error}</div>}
       <div
+        ref={gridRef}
         style={{
           display: 'grid',
           gap: 12,
-          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+          gridTemplateColumns: cols
+            ? `repeat(${cols}, minmax(0, 1fr))`
+            : 'repeat(auto-fill, minmax(220px, 1fr))',
         }}
       >
         {loading &&
-          Array.from({ length: skeletonCount }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+          Array.from({ length: cols ? cols * 2 : skeletonCount }).map(
+            (_, i) => <SkeletonCard key={i} />
+          )}
         {!loading &&
           items.length === 0 &&
-          Array.from({ length: Math.max(6, skeletonCount - 2) }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
+          Array.from({
+            length: Math.max(6, cols ? cols : skeletonCount - 2),
+          }).map((_, i) => <SkeletonCard key={i} />)}
         {!loading && items.length > 0 && items.map(renderCard)}
       </div>
     </section>
