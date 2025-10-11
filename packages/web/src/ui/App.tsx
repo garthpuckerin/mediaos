@@ -237,19 +237,7 @@ export default function App() {
         />
       );
     }
-    return (
-      <section>
-        <div
-          style={{
-            display: 'grid',
-            gap: 12,
-            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
-          }}
-        >
-          {/* Artwork items render here */}
-        </div>
-      </section>
-    );
+    return <LibraryList kind={kind} />;
   };
 
   const renderCalendar = () => (
@@ -673,6 +661,82 @@ export default function App() {
         title={title}
       />
     </div>
+  );
+}
+
+function LibraryList({ kind }: { kind: KindKey }) {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const toSingular = (k: KindKey) =>
+    k === 'movies' ? 'movie' : k === 'books' ? 'book' : k;
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/library');
+        const json = await res.json();
+        const singular = toSingular(kind);
+        const arr = Array.isArray(json.items) ? json.items : [];
+        const filtered = arr.filter((it: any) => it && it.kind === singular);
+        if (!cancelled) setItems(filtered);
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [kind]);
+
+  return (
+    <section>
+      {error && <div style={{ color: '#f87171' }}>{error}</div>}
+      <div
+        style={{
+          display: 'grid',
+          gap: 12,
+          gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+        }}
+      >
+        {loading && (
+          <div style={{ gridColumn: '1 / -1', color: '#9aa4b2' }}>Loading…</div>
+        )}
+        {!loading &&
+          items.map((it) => (
+            <div
+              key={it.id}
+              style={{
+                border: '1px solid #1f2937',
+                borderRadius: 12,
+                overflow: 'hidden',
+                background: '#0b1220',
+              }}
+            >
+              <div
+                style={{
+                  height: 300,
+                  background: '#111827',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#9aa4b2',
+                }}
+              >
+                Artwork
+              </div>
+              <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
+            </div>
+          ))}
+      </div>
+    </section>
   );
 }
 
