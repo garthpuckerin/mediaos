@@ -679,6 +679,15 @@ function LibraryList({ kind }: { kind: KindKey }) {
       setError(null);
       try {
         const res = await fetch('/api/library');
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(`HTTP ${res.status}: ${t.slice(0, 120)}`);
+        }
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (!ct.includes('application/json')) {
+          const t = await res.text();
+          throw new Error(`Unexpected response (not JSON): ${t.slice(0, 120)}`);
+        }
         const json = await res.json();
         const singular = toSingular(kind);
         const arr = Array.isArray(json.items) ? json.items : [];

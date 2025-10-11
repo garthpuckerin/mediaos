@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import dotenv from 'dotenv';
 import Fastify from 'fastify';
+import libraryRoutes from './routes/library';
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +33,9 @@ await app.register(cors, {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
 });
+
+// Application routes
+await app.register(libraryRoutes);
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {
