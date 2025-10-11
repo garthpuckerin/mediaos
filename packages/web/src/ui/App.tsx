@@ -127,10 +127,7 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
-  const setHash = (h: string) => {
-    window.location.hash = h;
-    setRoute(parseHash());
-  };
+  // Hash navigation handled via anchor hrefs and hashchange listener
 
   const libraryKinds: { key: KindKey; label: string }[] = [
     { key: 'series', label: 'Series' },
