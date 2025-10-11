@@ -10,7 +10,9 @@ function loadRoots(): Root[] {
   try {
     const arr = JSON.parse(raw);
     if (Array.isArray(arr)) return arr.filter(Boolean) as Root[];
-  } catch {}
+  } catch (_e) {
+    // ignore invalid JSON format
+  }
   if (raw.includes('=')) {
     const parts = raw
       .split(';')
