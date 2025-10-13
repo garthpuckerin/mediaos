@@ -845,7 +845,7 @@ function LibraryList({
     );
   };
 
-  const skeletonCount = 10;
+  // skeletons will use estimated column count
 
   return (
     <section>
