@@ -348,6 +348,59 @@ export default function App() {
                 const label =
                   key === 'qbittorrent' ? 'qBittorrent' : key.toUpperCase();
                 const s = (settings as any)[key];
+                const doTest = async (
+                  e: React.MouseEvent<HTMLButtonElement>
+                ) => {
+                  e.preventDefault();
+                  const form = (e.currentTarget as HTMLButtonElement)
+                    .form as HTMLFormElement;
+                  const data = new FormData(form);
+                  const b = (n: string) => data.get(n) === 'on';
+                  const str = (n: string) => String(data.get(n) || '').trim();
+                  const num = (n: string) => {
+                    const v = Number(String(data.get(n) || '').trim());
+                    return Number.isFinite(v) ? Math.trunc(v) : undefined;
+                  };
+                  const payload: any =
+                    key === 'qbittorrent'
+                      ? {
+                          enabled: b('qb.enabled'),
+                          baseUrl: str('qb.baseUrl') || undefined,
+                          username: str('qb.username') || undefined,
+                          password: str('qb.password') || undefined,
+                          timeoutMs: num('qb.timeoutMs'),
+                        }
+                      : key === 'nzbget'
+                        ? {
+                            enabled: b('nz.enabled'),
+                            baseUrl: str('nz.baseUrl') || undefined,
+                            username: str('nz.username') || undefined,
+                            password: str('nz.password') || undefined,
+                            timeoutMs: num('nz.timeoutMs'),
+                          }
+                        : {
+                            enabled: b('sab.enabled'),
+                            baseUrl: str('sab.baseUrl') || undefined,
+                            apiKey: str('sab.apiKey') || undefined,
+                            timeoutMs: num('sab.timeoutMs'),
+                          };
+                  try {
+                    const r = await fetch('/api/settings/downloaders/test', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ client: key, settings: payload }),
+                    });
+                    const j = await r.json();
+                    if (j.ok)
+                      alert(
+                        `${label} reachable${j.status ? ` (status ${j.status})` : ''}`
+                      );
+                    else
+                      alert(`${label} failed: ${j.error || 'unknown error'}`);
+                  } catch (err) {
+                    alert((err as Error).message);
+                  }
+                };
                 return (
                   <fieldset
                     key={key}
@@ -455,6 +508,15 @@ export default function App() {
                           style={inputStyle}
                         />
                       </label>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        type="button"
+                        style={buttonStyle}
+                        onClick={doTest}
+                      >
+                        Test Connection
+                      </button>
                     </div>
                   </fieldset>
                 );
