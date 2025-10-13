@@ -47,6 +47,30 @@ const plugin: FastifyPluginAsync = async (app) => {
       results: [{ title: `RESULT for ${q}`, size: '1.4GB', seeders: 120 }],
     };
   });
+
+  app.patch('/:id', async (req) => {
+    const id = (req.params as any).id as string;
+    const schema = z.object({
+      enabled: z.boolean().optional(),
+      name: z.string().optional(),
+      url: z.string().optional(),
+    });
+    const data = schema.parse(req.body || {});
+    const ix = indexers.find((x) => x.id === id);
+    if (!ix) return { ok: false, error: 'not_found' };
+    if (typeof data.enabled === 'boolean') ix.enabled = data.enabled;
+    if (typeof data.name === 'string') ix.name = data.name;
+    if (typeof data.url === 'string') (ix as any).url = data.url;
+    return { ok: true, indexer: ix };
+  });
+
+  app.delete('/:id', async (req) => {
+    const id = (req.params as any).id as string;
+    const idx = indexers.findIndex((x) => x.id === id);
+    if (idx === -1) return { ok: false, error: 'not_found' };
+    const [removed] = indexers.splice(idx, 1);
+    return { ok: true, indexer: removed };
+  });
 };
 
 export default plugin;
