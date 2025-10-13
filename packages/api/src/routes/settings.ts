@@ -38,35 +38,27 @@ function isFiniteNumber(v: any): number | undefined {
 }
 
 function normalize(obj: any): Downloaders {
-  const qb: QB = {
-    enabled: !!obj?.qbittorrent?.enabled,
-    hasPassword: !!obj?.qbittorrent?.password,
-  } as QB;
-  if (obj?.qbittorrent?.baseUrl) qb.baseUrl = String(obj.qbittorrent.baseUrl);
-  if (obj?.qbittorrent?.username)
-    qb.username = String(obj.qbittorrent.username);
-  const qbTimeout = isFiniteNumber(obj?.qbittorrent?.timeoutMs);
-  if (typeof qbTimeout === 'number') qb.timeoutMs = qbTimeout;
-
-  const nz: NZB = {
-    enabled: !!obj?.nzbget?.enabled,
-    hasPassword: !!obj?.nzbget?.password,
-  } as NZB;
-  if (obj?.nzbget?.baseUrl) nz.baseUrl = String(obj.nzbget.baseUrl);
-  if (obj?.nzbget?.username) nz.username = String(obj.nzbget.username);
-  const nzTimeout = isFiniteNumber(obj?.nzbget?.timeoutMs);
-  if (typeof nzTimeout === 'number') nz.timeoutMs = nzTimeout;
-
-  const sab: SAB = { enabled: !!obj?.sabnzbd?.enabled } as SAB;
-  if (obj?.sabnzbd?.baseUrl) sab.baseUrl = String(obj.sabnzbd.baseUrl);
-  if (obj?.sabnzbd?.apiKey) (sab as any).hasApiKey = true;
-  const sabTimeout = isFiniteNumber(obj?.sabnzbd?.timeoutMs);
-  if (typeof sabTimeout === 'number') sab.timeoutMs = sabTimeout;
-
   return {
-    qbittorrent: qb,
-    nzbget: nz,
-    sabnzbd: sab,
+    qbittorrent: {
+      enabled: !!obj?.qbittorrent?.enabled,
+      baseUrl: obj?.qbittorrent?.baseUrl || undefined,
+      username: obj?.qbittorrent?.username || undefined,
+      hasPassword: !!obj?.qbittorrent?.password,
+      timeoutMs: isFiniteNumber(obj?.qbittorrent?.timeoutMs),
+    },
+    nzbget: {
+      enabled: !!obj?.nzbget?.enabled,
+      baseUrl: obj?.nzbget?.baseUrl || undefined,
+      username: obj?.nzbget?.username || undefined,
+      hasPassword: !!obj?.nzbget?.password,
+      timeoutMs: isFiniteNumber(obj?.nzbget?.timeoutMs),
+    },
+    sabnzbd: {
+      enabled: !!obj?.sabnzbd?.enabled,
+      baseUrl: obj?.sabnzbd?.baseUrl || undefined,
+      apiKey: obj?.sabnzbd?.apiKey || undefined,
+      timeoutMs: isFiniteNumber(obj?.sabnzbd?.timeoutMs),
+    },
   };
 }
 
@@ -84,39 +76,30 @@ async function saveDownloaders(payload: Downloaders, existing?: any) {
   const toSave = {
     qbittorrent: {
       enabled: !!payload.qbittorrent.enabled,
-      ...(payload.qbittorrent.baseUrl
-        ? { baseUrl: payload.qbittorrent.baseUrl }
-        : {}),
-      ...(payload.qbittorrent.username
-        ? { username: payload.qbittorrent.username }
-        : {}),
+      baseUrl: payload.qbittorrent.baseUrl || undefined,
+      username: payload.qbittorrent.username || undefined,
+      // only persist password if provided
       password:
         payload.qbittorrent.password && payload.qbittorrent.password.length > 0
           ? payload.qbittorrent.password
           : existing?.qbittorrent?.password || undefined,
-      ...(typeof isFiniteNumber(payload.qbittorrent.timeoutMs) === 'number'
-        ? { timeoutMs: isFiniteNumber(payload.qbittorrent.timeoutMs) }
-        : {}),
+      timeoutMs: isFiniteNumber(payload.qbittorrent.timeoutMs),
     },
     nzbget: {
       enabled: !!payload.nzbget.enabled,
-      ...(payload.nzbget.baseUrl ? { baseUrl: payload.nzbget.baseUrl } : {}),
-      ...(payload.nzbget.username ? { username: payload.nzbget.username } : {}),
+      baseUrl: payload.nzbget.baseUrl || undefined,
+      username: payload.nzbget.username || undefined,
       password:
         payload.nzbget.password && payload.nzbget.password.length > 0
           ? payload.nzbget.password
           : existing?.nzbget?.password || undefined,
-      ...(typeof isFiniteNumber(payload.nzbget.timeoutMs) === 'number'
-        ? { timeoutMs: isFiniteNumber(payload.nzbget.timeoutMs) }
-        : {}),
+      timeoutMs: isFiniteNumber(payload.nzbget.timeoutMs),
     },
     sabnzbd: {
       enabled: !!payload.sabnzbd.enabled,
-      ...(payload.sabnzbd.baseUrl ? { baseUrl: payload.sabnzbd.baseUrl } : {}),
-      ...(payload.sabnzbd.apiKey ? { apiKey: payload.sabnzbd.apiKey } : {}),
-      ...(typeof isFiniteNumber(payload.sabnzbd.timeoutMs) === 'number'
-        ? { timeoutMs: isFiniteNumber(payload.sabnzbd.timeoutMs) }
-        : {}),
+      baseUrl: payload.sabnzbd.baseUrl || undefined,
+      apiKey: payload.sabnzbd.apiKey || undefined,
+      timeoutMs: isFiniteNumber(payload.sabnzbd.timeoutMs),
     },
   } as any;
   await ensureDir(CONFIG_FILE);
@@ -131,33 +114,27 @@ const plugin: FastifyPluginAsync = async (app) => {
 
   app.post('/api/settings/downloaders', async (req) => {
     const body = (req.body || {}) as any;
-    const qbIn: QB = { enabled: !!body?.qbittorrent?.enabled } as QB;
-    if (body?.qbittorrent?.baseUrl)
-      qbIn.baseUrl = String(body.qbittorrent.baseUrl);
-    if (body?.qbittorrent?.username)
-      qbIn.username = String(body.qbittorrent.username);
-    if (body?.qbittorrent?.password)
-      qbIn.password = String(body.qbittorrent.password);
-    const qbInTimeout = isFiniteNumber(body?.qbittorrent?.timeoutMs);
-    if (typeof qbInTimeout === 'number') qbIn.timeoutMs = qbInTimeout;
-
-    const nzIn: NZB = { enabled: !!body?.nzbget?.enabled } as NZB;
-    if (body?.nzbget?.baseUrl) nzIn.baseUrl = String(body.nzbget.baseUrl);
-    if (body?.nzbget?.username) nzIn.username = String(body.nzbget.username);
-    if (body?.nzbget?.password) nzIn.password = String(body.nzbget.password);
-    const nzInTimeout = isFiniteNumber(body?.nzbget?.timeoutMs);
-    if (typeof nzInTimeout === 'number') nzIn.timeoutMs = nzInTimeout;
-
-    const sabIn: SAB = { enabled: !!body?.sabnzbd?.enabled } as SAB;
-    if (body?.sabnzbd?.baseUrl) sabIn.baseUrl = String(body.sabnzbd.baseUrl);
-    if (body?.sabnzbd?.apiKey) sabIn.apiKey = String(body.sabnzbd.apiKey);
-    const sabInTimeout = isFiniteNumber(body?.sabnzbd?.timeoutMs);
-    if (typeof sabInTimeout === 'number') sabIn.timeoutMs = sabInTimeout;
-
     const incoming: Downloaders = {
-      qbittorrent: qbIn,
-      nzbget: nzIn,
-      sabnzbd: sabIn,
+      qbittorrent: {
+        enabled: !!body?.qbittorrent?.enabled,
+        baseUrl: body?.qbittorrent?.baseUrl || undefined,
+        username: body?.qbittorrent?.username || undefined,
+        password: body?.qbittorrent?.password || undefined,
+        timeoutMs: isFiniteNumber(body?.qbittorrent?.timeoutMs),
+      },
+      nzbget: {
+        enabled: !!body?.nzbget?.enabled,
+        baseUrl: body?.nzbget?.baseUrl || undefined,
+        username: body?.nzbget?.username || undefined,
+        password: body?.nzbget?.password || undefined,
+        timeoutMs: isFiniteNumber(body?.nzbget?.timeoutMs),
+      },
+      sabnzbd: {
+        enabled: !!body?.sabnzbd?.enabled,
+        baseUrl: body?.sabnzbd?.baseUrl || undefined,
+        apiKey: body?.sabnzbd?.apiKey || undefined,
+        timeoutMs: isFiniteNumber(body?.sabnzbd?.timeoutMs),
+      },
     };
     let existing: any = {};
     try {
