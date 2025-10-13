@@ -46,7 +46,7 @@ const subNavItemStyle: React.CSSProperties = {
 
 type TopKey = 'library' | 'calendar' | 'activity' | 'settings' | 'system';
 type KindKey = 'series' | 'movies' | 'books' | 'music';
-type Route = { top: TopKey; kind?: KindKey; page?: string };
+type Route = { top: TopKey; kind?: KindKey; page?: string; id?: string };
 
 type DownloaderSettingsResponse = {
   qbittorrent: {
@@ -93,7 +93,8 @@ function parseHash(): Route {
       ? (kindRaw as KindKey)
       : 'series';
     const page = parts[2] || 'list';
-    return { top, kind, page };
+    const id = page === 'item' ? parts[3] : undefined;
+    return { top, kind, page, id };
   }
   const p = parts[1];
   const obj: Route = { top };
@@ -226,6 +227,16 @@ export default function App() {
     const page: string = route.page ?? 'list';
     const kindLabel =
       libraryKinds.find((k) => k.key === kind)?.label ?? 'Series';
+    if (page === 'item') {
+      return (
+        <section>
+          <h2>{kindLabel} — Detail</h2>
+          <div style={{ color: '#9aa4b2' }}>
+            Item ID: {route.id || '(unknown)'} — detail view coming soon.
+          </div>
+        </section>
+      );
+    }
     if (page === 'add') {
       return <LibraryAdd kindLabel={kindLabel} />;
     }
@@ -792,56 +803,91 @@ function LibraryList({
 
   const renderCard = (it: any) => {
     const poster = typeof it.posterUrl === 'string' ? it.posterUrl : null;
+    const detailHref = `#/library/${kind}/item/${encodeURIComponent(
+      it.id || it.title || ''
+    )}`;
     return (
-      <button
-        type="button"
-        key={it.id}
-        onClick={() => onOpenArtwork(it.title || '')}
-        style={{
-          display: 'block',
-          width: '100%',
-          padding: 0,
-          background: 'transparent',
-          border: 'none',
-          textAlign: 'inherit',
-          cursor: 'pointer',
-        }}
-      >
+      <div key={it.id} style={{ position: 'relative' }}>
+        {/* Action icons overlay */}
         <div
           style={{
-            border: '1px solid #1f2937',
-            borderRadius: 12,
-            overflow: 'hidden',
-            background: '#0b1220',
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            display: 'flex',
+            gap: 6,
+            zIndex: 2,
+          }}
+        >
+          <button
+            type="button"
+            title="Manage Artwork"
+            aria-label={`Manage artwork for ${it.title || 'item'}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenArtwork(it.title || '');
+            }}
+            style={{
+              padding: '4px 6px',
+              borderRadius: 8,
+              border: '1px solid #1f2937',
+              background: '#0b1220',
+              color: '#e5e7eb',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            🖼️
+          </button>
+        </div>
+        {/* Card link */}
+        <a
+          href={detailHref}
+          style={{
+            display: 'block',
+            width: '100%',
+            textDecoration: 'none',
+            color: 'inherit',
           }}
         >
           <div
             style={{
-              height: 300,
-              background: poster ? 'transparent' : '#111827',
-              display: 'grid',
-              placeItems: 'center',
+              border: '1px solid #1f2937',
+              borderRadius: 12,
+              overflow: 'hidden',
+              background: '#0b1220',
             }}
           >
-            {poster ? (
-              <img
-                src={poster}
-                alt={it.title || 'Poster'}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).style.display = 'none';
-                  (
-                    e.currentTarget.parentElement as HTMLElement
-                  ).style.background = '#111827';
-                }}
-              />
-            ) : (
-              <span style={{ color: '#9aa4b2' }}>No artwork</span>
-            )}
+            <div
+              style={{
+                height: 300,
+                background: poster ? 'transparent' : '#111827',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              {poster ? (
+                <img
+                  src={poster}
+                  alt={it.title || 'Poster'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display =
+                      'none';
+                    (
+                      e.currentTarget.parentElement as HTMLElement
+                    ).style.background = '#111827';
+                  }}
+                />
+              ) : (
+                <span style={{ color: '#9aa4b2' }}>No artwork</span>
+              )}
+            </div>
+            <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
           </div>
-          <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
-        </div>
-      </button>
+        </a>
+      </div>
     );
   };
 
