@@ -93,8 +93,9 @@ function parseHash(): Route {
       ? (kindRaw as KindKey)
       : 'series';
     const page = parts[2] || 'list';
-    const id = page === 'item' ? parts[3] : undefined;
-    return { top, kind, page, id };
+    const obj: Route = { top, kind, page };
+    if (page === 'item' && parts[3]) (obj as any).id = parts[3];
+    return obj;
   }
   const p = parts[1];
   const obj: Route = { top };
