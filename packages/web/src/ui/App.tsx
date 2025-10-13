@@ -746,16 +746,17 @@ function LibraryList({
     return () => window.removeEventListener('library:changed', handler as any);
   }, []);
 
-  // Force 9 columns on wide screens to eliminate end-of-row gap
+  // Compute an estimated column count based on container width
   React.useEffect(() => {
     const el = gridRef.current;
     const RO: any = (window as any).ResizeObserver;
     if (!el || typeof RO === 'undefined') return;
     const gap = 12; // keep in sync with grid gap
+    const minCard = 220; // minimum card width
     const ro = new RO((entries: any) => {
       const w = entries[0]?.contentRect?.width ?? el.clientWidth;
-      const threshold = 220 * 9 + gap * 8; // ≈ 2076 px
-      setCols(w >= threshold ? 9 : null);
+      const c = Math.max(1, Math.floor((w + gap) / (minCard + gap)));
+      setCols(c);
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -854,20 +855,18 @@ function LibraryList({
         style={{
           display: 'grid',
           gap: 12,
-          gridTemplateColumns: cols
-            ? `repeat(${cols}, minmax(0, 1fr))`
-            : 'repeat(auto-fill, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         }}
       >
         {loading &&
-          Array.from({ length: cols ? cols * 2 : skeletonCount }).map(
-            (_, i) => <SkeletonCard key={i} />
-          )}
+          Array.from({ length: (cols || 6) * 2 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         {!loading &&
           items.length === 0 &&
-          Array.from({
-            length: Math.max(6, cols ? cols : skeletonCount - 2),
-          }).map((_, i) => <SkeletonCard key={i} />)}
+          Array.from({ length: Math.max(6, cols || 6) }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         {!loading && items.length > 0 && items.map(renderCard)}
       </div>
     </section>
