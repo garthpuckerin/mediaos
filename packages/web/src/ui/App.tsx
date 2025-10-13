@@ -46,7 +46,7 @@ const subNavItemStyle: React.CSSProperties = {
 
 type TopKey = 'library' | 'calendar' | 'activity' | 'settings' | 'system';
 type KindKey = 'series' | 'movies' | 'books' | 'music';
-type Route = { top: TopKey; kind?: KindKey; page?: string };
+type Route = { top: TopKey; kind?: KindKey; page?: string; id?: string };
 
 type DownloaderSettingsResponse = {
   qbittorrent: {
@@ -93,7 +93,9 @@ function parseHash(): Route {
       ? (kindRaw as KindKey)
       : 'series';
     const page = parts[2] || 'list';
-    return { top, kind, page };
+    const obj: Route = { top, kind, page };
+    if (page === 'item' && parts[3]) (obj as any).id = parts[3];
+    return obj;
   }
   const p = parts[1];
   const obj: Route = { top };
@@ -105,7 +107,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>(parseHash());
   const [health, setHealth] = useState<string>('checking...');
   const [artOpen, setArtOpen] = useState(false);
-  const [title] = useState('Artwork');
+  const [artTitle, setArtTitle] = useState<string | null>(null);
   const [settings, setSettings] = useState<null | DownloaderSettingsResponse>(
     null
   );
@@ -226,6 +228,16 @@ export default function App() {
     const page: string = route.page ?? 'list';
     const kindLabel =
       libraryKinds.find((k) => k.key === kind)?.label ?? 'Series';
+    if (page === 'item') {
+      return (
+        <section>
+          <h2>{kindLabel} — Detail</h2>
+          <div style={{ color: '#9aa4b2' }}>
+            Item ID: {route.id || '(unknown)'} — detail view coming soon.
+          </div>
+        </section>
+      );
+    }
     if (page === 'add') {
       return <LibraryAdd kindLabel={kindLabel} />;
     }
@@ -237,7 +249,15 @@ export default function App() {
         />
       );
     }
-    return <LibraryList kind={kind} />;
+    return (
+      <LibraryList
+        kind={kind}
+        onOpenArtwork={(t) => {
+          setArtTitle(t);
+          setArtOpen(true);
+        }}
+      />
+    );
   };
 
   const renderCalendar = () => (
@@ -658,13 +678,19 @@ export default function App() {
       <ArtworkModal
         open={artOpen}
         onClose={() => setArtOpen(false)}
-        title={title}
+        title={artTitle || ''}
       />
     </div>
   );
 }
 
-function LibraryList({ kind }: { kind: KindKey }) {
+function LibraryList({
+  kind,
+  onOpenArtwork,
+}: {
+  kind: KindKey;
+  onOpenArtwork: (title: string) => void;
+}) {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -707,16 +733,42 @@ function LibraryList({ kind }: { kind: KindKey }) {
     };
   }, [kind]);
 
-  // Force 9 columns on wide screens to eliminate end-of-row gap
+  // Refresh list when artwork changes
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const d = e.detail || {};
+        if (!d || !d.title) return;
+        setItems((prev) =>
+          prev.map((it) =>
+            it.title === d.title
+              ? {
+                  ...it,
+                  ...(d.tab === 'poster' ? { posterUrl: d.url } : {}),
+                  ...(d.tab === 'background' ? { backgroundUrl: d.url } : {}),
+                }
+              : it
+          )
+        );
+      } catch (_e) {
+        /* ignore */
+      }
+    };
+    window.addEventListener('library:changed', handler as any);
+    return () => window.removeEventListener('library:changed', handler as any);
+  }, []);
+
+  // Compute an estimated column count based on container width
   React.useEffect(() => {
     const el = gridRef.current;
     const RO: any = (window as any).ResizeObserver;
     if (!el || typeof RO === 'undefined') return;
     const gap = 12; // keep in sync with grid gap
+    const minCard = 220; // minimum card width
     const ro = new RO((entries: any) => {
       const w = entries[0]?.contentRect?.width ?? el.clientWidth;
-      const threshold = 220 * 9 + gap * 8; // ≈ 2076 px
-      setCols(w >= threshold ? 9 : null);
+      const c = Math.max(1, Math.floor((w + gap) / (minCard + gap)));
+      setCols(c);
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -752,46 +804,95 @@ function LibraryList({ kind }: { kind: KindKey }) {
 
   const renderCard = (it: any) => {
     const poster = typeof it.posterUrl === 'string' ? it.posterUrl : null;
+    const detailHref = `#/library/${kind}/item/${encodeURIComponent(
+      it.id || it.title || ''
+    )}`;
     return (
-      <div
-        key={it.id}
-        style={{
-          border: '1px solid #1f2937',
-          borderRadius: 12,
-          overflow: 'hidden',
-          background: '#0b1220',
-        }}
-      >
+      <div key={it.id} style={{ position: 'relative' }}>
+        {/* Action icons overlay */}
         <div
           style={{
-            height: 300,
-            background: poster ? 'transparent' : '#111827',
-            display: 'grid',
-            placeItems: 'center',
+            position: 'absolute',
+            top: 8,
+            right: 8,
+            display: 'flex',
+            gap: 6,
+            zIndex: 2,
           }}
         >
-          {poster ? (
-            <img
-              src={poster}
-              alt={it.title || 'Poster'}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).style.display = 'none';
-                (
-                  e.currentTarget.parentElement as HTMLElement
-                ).style.background = '#111827';
-              }}
-            />
-          ) : (
-            <span style={{ color: '#9aa4b2' }}>No artwork</span>
-          )}
+          <button
+            type="button"
+            title="Manage Artwork"
+            aria-label={`Manage artwork for ${it.title || 'item'}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenArtwork(it.title || '');
+            }}
+            style={{
+              padding: '4px 6px',
+              borderRadius: 8,
+              border: '1px solid #1f2937',
+              background: '#0b1220',
+              color: '#e5e7eb',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            🖼️
+          </button>
         </div>
-        <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
+        {/* Card link */}
+        <a
+          href={detailHref}
+          style={{
+            display: 'block',
+            width: '100%',
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
+          <div
+            style={{
+              border: '1px solid #1f2937',
+              borderRadius: 12,
+              overflow: 'hidden',
+              background: '#0b1220',
+            }}
+          >
+            <div
+              style={{
+                height: 300,
+                background: poster ? 'transparent' : '#111827',
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              {poster ? (
+                <img
+                  src={poster}
+                  alt={it.title || 'Poster'}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display =
+                      'none';
+                    (
+                      e.currentTarget.parentElement as HTMLElement
+                    ).style.background = '#111827';
+                  }}
+                />
+              ) : (
+                <span style={{ color: '#9aa4b2' }}>No artwork</span>
+              )}
+            </div>
+            <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
+          </div>
+        </a>
       </div>
     );
   };
 
-  const skeletonCount = 10;
+  // skeletons will use estimated column count
 
   return (
     <section>
@@ -801,20 +902,18 @@ function LibraryList({ kind }: { kind: KindKey }) {
         style={{
           display: 'grid',
           gap: 12,
-          gridTemplateColumns: cols
-            ? `repeat(${cols}, minmax(0, 1fr))`
-            : 'repeat(auto-fill, minmax(220px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         }}
       >
         {loading &&
-          Array.from({ length: cols ? cols * 2 : skeletonCount }).map(
-            (_, i) => <SkeletonCard key={i} />
-          )}
+          Array.from({ length: (cols || 6) * 2 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         {!loading &&
           items.length === 0 &&
-          Array.from({
-            length: Math.max(6, cols ? cols : skeletonCount - 2),
-          }).map((_, i) => <SkeletonCard key={i} />)}
+          Array.from({ length: Math.max(6, cols || 6) }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         {!loading && items.length > 0 && items.map(renderCard)}
       </div>
     </section>
