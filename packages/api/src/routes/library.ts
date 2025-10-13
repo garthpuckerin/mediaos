@@ -7,6 +7,13 @@ const library: any[] = [];
 const plugin: FastifyPluginAsync = async (app) => {
   app.get('/api/library', async () => ({ items: library }));
 
+  app.get('/api/library/:id', async (req, _res) => {
+    const id = (req.params as any).id as string;
+    const item = library.find((it) => it.id === id || it.title === id);
+    if (!item) return { ok: false, error: 'not_found' };
+    return { ok: true, item };
+  });
+
   app.post('/api/library', async (req, _res) => {
     const schema = z.object({
       kind: z.enum(['movie', 'series', 'music', 'book']),

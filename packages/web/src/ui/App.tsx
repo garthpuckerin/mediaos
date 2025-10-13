@@ -230,12 +230,14 @@ export default function App() {
       libraryKinds.find((k) => k.key === kind)?.label ?? 'Series';
     if (page === 'item') {
       return (
-        <section>
-          <h2>{kindLabel} — Detail</h2>
-          <div style={{ color: '#9aa4b2' }}>
-            Item ID: {route.id || '(unknown)'} — detail view coming soon.
-          </div>
-        </section>
+        <LibraryItemDetail
+          kind={kind}
+          id={route.id || ''}
+          onOpenArtwork={(t) => {
+            setArtTitle(t);
+            setArtOpen(true);
+          }}
+        />
       );
     }
     if (page === 'add') {
@@ -916,6 +918,143 @@ function LibraryList({
           ))}
         {!loading && items.length > 0 && items.map(renderCard)}
       </div>
+    </section>
+  );
+}
+
+function LibraryItemDetail({
+  kind,
+  id,
+  onOpenArtwork,
+}: {
+  kind: KindKey;
+  id: string;
+  onOpenArtwork: (title: string) => void;
+}) {
+  const [item, setItem] = React.useState<any | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`/api/library/${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error(await res.text());
+        const json = await res.json();
+        if (!json.ok) throw new Error(json.error || 'not_found');
+        if (!cancelled) setItem(json.item);
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  const title = item?.title || 'Item';
+  const poster = item?.posterUrl || null;
+
+  return (
+    <section>
+      {error && <div style={{ color: '#f87171' }}>{error}</div>}
+      {loading && <div style={{ color: '#9aa4b2' }}>Loading…</div>}
+      {!loading && (
+        <div
+          style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}
+        >
+          <div>
+            <div
+              style={{
+                width: '100%',
+                border: '1px solid #1f2937',
+                borderRadius: 12,
+                overflow: 'hidden',
+                background: '#0b1220',
+                height: 360,
+                display: 'grid',
+                placeItems: 'center',
+              }}
+            >
+              {poster ? (
+                <img
+                  src={poster}
+                  alt={title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <span style={{ color: '#9aa4b2' }}>No artwork</span>
+              )}
+            </div>
+            <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+              <button style={buttonStyle} onClick={() => onOpenArtwork(title)}>
+                Manage Artwork
+              </button>
+              <button
+                style={buttonStyle}
+                onClick={() => alert('Manual Search coming soon')}
+              >
+                Manual Search
+              </button>
+            </div>
+          </div>
+          <div>
+            <h2 style={{ marginTop: 0 }}>{title}</h2>
+            <div style={{ color: '#9aa4b2', marginBottom: 12 }}>
+              Kind: {kind}
+            </div>
+            {kind === 'series' && (
+              <div>
+                <h3>Seasons</h3>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {[1, 2, 3].map((s) => (
+                    <div
+                      key={s}
+                      style={{
+                        border: '1px solid #1f2937',
+                        borderRadius: 8,
+                        padding: 8,
+                      }}
+                    >
+                      Season {s} — Episodes (placeholder)
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {kind === 'movies' && (
+              <div>
+                <h3>Releases</h3>
+                <div style={{ color: '#9aa4b2' }}>
+                  Releases list (placeholder)
+                </div>
+              </div>
+            )}
+            {kind === 'music' && (
+              <div>
+                <h3>Albums / Tracks</h3>
+                <div style={{ color: '#9aa4b2' }}>
+                  Albums/tracks (placeholder)
+                </div>
+              </div>
+            )}
+            {kind === 'books' && (
+              <div>
+                <h3>Volumes / Chapters</h3>
+                <div style={{ color: '#9aa4b2' }}>
+                  Volumes/chapters (placeholder)
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
