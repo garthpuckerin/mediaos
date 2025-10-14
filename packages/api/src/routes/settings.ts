@@ -38,28 +38,33 @@ function isFiniteNumber(v: any): number | undefined {
 }
 
 function normalize(obj: any): Downloaders {
-  return {
-    qbittorrent: {
-      enabled: !!obj?.qbittorrent?.enabled,
-      baseUrl: obj?.qbittorrent?.baseUrl || undefined,
-      username: obj?.qbittorrent?.username || undefined,
-      hasPassword: !!obj?.qbittorrent?.password,
-      timeoutMs: isFiniteNumber(obj?.qbittorrent?.timeoutMs),
-    },
-    nzbget: {
-      enabled: !!obj?.nzbget?.enabled,
-      baseUrl: obj?.nzbget?.baseUrl || undefined,
-      username: obj?.nzbget?.username || undefined,
-      hasPassword: !!obj?.nzbget?.password,
-      timeoutMs: isFiniteNumber(obj?.nzbget?.timeoutMs),
-    },
-    sabnzbd: {
-      enabled: !!obj?.sabnzbd?.enabled,
-      baseUrl: obj?.sabnzbd?.baseUrl || undefined,
-      apiKey: obj?.sabnzbd?.apiKey || undefined,
-      timeoutMs: isFiniteNumber(obj?.sabnzbd?.timeoutMs),
-    },
+  const qb: QB = {
+    enabled: !!obj?.qbittorrent?.enabled,
+    baseUrl: obj?.qbittorrent?.baseUrl || undefined,
+    username: obj?.qbittorrent?.username || undefined,
+    hasPassword: !!obj?.qbittorrent?.password,
   };
+  const qbT = isFiniteNumber(obj?.qbittorrent?.timeoutMs);
+  if (typeof qbT === 'number') qb.timeoutMs = qbT;
+
+  const nz: NZB = {
+    enabled: !!obj?.nzbget?.enabled,
+    baseUrl: obj?.nzbget?.baseUrl || undefined,
+    username: obj?.nzbget?.username || undefined,
+    hasPassword: !!obj?.nzbget?.password,
+  };
+  const nzT = isFiniteNumber(obj?.nzbget?.timeoutMs);
+  if (typeof nzT === 'number') nz.timeoutMs = nzT;
+
+  const sab: SAB = {
+    enabled: !!obj?.sabnzbd?.enabled,
+    baseUrl: obj?.sabnzbd?.baseUrl || undefined,
+    apiKey: obj?.sabnzbd?.apiKey || undefined,
+  };
+  const sabT = isFiniteNumber(obj?.sabnzbd?.timeoutMs);
+  if (typeof sabT === 'number') sab.timeoutMs = sabT;
+
+  return { qbittorrent: qb, nzbget: nz, sabnzbd: sab };
 }
 
 async function loadDownloaders(): Promise<Downloaders> {
@@ -114,27 +119,36 @@ const plugin: FastifyPluginAsync = async (app) => {
 
   app.post('/api/settings/downloaders', async (req) => {
     const body = (req.body || {}) as any;
+    const qbIn: QB = {
+      enabled: !!body?.qbittorrent?.enabled,
+      baseUrl: body?.qbittorrent?.baseUrl || undefined,
+      username: body?.qbittorrent?.username || undefined,
+      password: body?.qbittorrent?.password || undefined,
+    };
+    const qbInT = isFiniteNumber(body?.qbittorrent?.timeoutMs);
+    if (typeof qbInT === 'number') qbIn.timeoutMs = qbInT;
+
+    const nzIn: NZB = {
+      enabled: !!body?.nzbget?.enabled,
+      baseUrl: body?.nzbget?.baseUrl || undefined,
+      username: body?.nzbget?.username || undefined,
+      password: body?.nzbget?.password || undefined,
+    };
+    const nzInT = isFiniteNumber(body?.nzbget?.timeoutMs);
+    if (typeof nzInT === 'number') nzIn.timeoutMs = nzInT;
+
+    const sabIn: SAB = {
+      enabled: !!body?.sabnzbd?.enabled,
+      baseUrl: body?.sabnzbd?.baseUrl || undefined,
+      apiKey: body?.sabnzbd?.apiKey || undefined,
+    };
+    const sabInT = isFiniteNumber(body?.sabnzbd?.timeoutMs);
+    if (typeof sabInT === 'number') sabIn.timeoutMs = sabInT;
+
     const incoming: Downloaders = {
-      qbittorrent: {
-        enabled: !!body?.qbittorrent?.enabled,
-        baseUrl: body?.qbittorrent?.baseUrl || undefined,
-        username: body?.qbittorrent?.username || undefined,
-        password: body?.qbittorrent?.password || undefined,
-        timeoutMs: isFiniteNumber(body?.qbittorrent?.timeoutMs),
-      },
-      nzbget: {
-        enabled: !!body?.nzbget?.enabled,
-        baseUrl: body?.nzbget?.baseUrl || undefined,
-        username: body?.nzbget?.username || undefined,
-        password: body?.nzbget?.password || undefined,
-        timeoutMs: isFiniteNumber(body?.nzbget?.timeoutMs),
-      },
-      sabnzbd: {
-        enabled: !!body?.sabnzbd?.enabled,
-        baseUrl: body?.sabnzbd?.baseUrl || undefined,
-        apiKey: body?.sabnzbd?.apiKey || undefined,
-        timeoutMs: isFiniteNumber(body?.sabnzbd?.timeoutMs),
-      },
+      qbittorrent: qbIn,
+      nzbget: nzIn,
+      sabnzbd: sabIn,
     };
     let existing: any = {};
     try {
