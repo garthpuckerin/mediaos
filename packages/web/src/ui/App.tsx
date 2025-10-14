@@ -1060,6 +1060,9 @@ function LibraryItemDetail({
   const [item, setItem] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [query, setQuery] = React.useState('');
+  const [results, setResults] = React.useState<any[]>([]);
+  const [searching, setSearching] = React.useState(false);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1134,6 +1137,105 @@ function LibraryItemDetail({
             <h2 style={{ marginTop: 0 }}>{title}</h2>
             <div style={{ color: '#9aa4b2', marginBottom: 12 }}>
               Kind: {kind}
+            </div>
+            <div
+              style={{
+                borderTop: '1px solid #1f2937',
+                paddingTop: 12,
+                marginTop: 12,
+              }}
+            >
+              <h3>Manual Search</h3>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!query || query.trim().length < 2) return;
+                  setSearching(true);
+                  try {
+                    const r = await fetch('/api/indexers/search', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ q: query.trim() }),
+                    });
+                    const j = await r.json();
+                    setResults(Array.isArray(j.results) ? j.results : []);
+                  } catch (e2) {
+                    alert((e2 as Error).message);
+                  } finally {
+                    setSearching(false);
+                  }
+                }}
+                style={{ display: 'flex', gap: 8, marginBottom: 8 }}
+              >
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={`Search releases for ${title}`}
+                  style={inputStyle}
+                />
+                <button style={buttonStyle} disabled={searching}>
+                  {searching ? 'Searching…' : 'Search'}
+                </button>
+              </form>
+              <div style={{ border: '1px solid #1f2937', borderRadius: 8 }}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 120px 100px 100px',
+                    gap: 8,
+                    padding: 8,
+                    borderBottom: '1px solid #1f2937',
+                    color: '#9aa4b2',
+                    fontSize: 12,
+                  }}
+                >
+                  <div>Title</div>
+                  <div>Size</div>
+                  <div>Seeders</div>
+                  <div>Action</div>
+                </div>
+                <div>
+                  {results.map((r, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 120px 100px 100px',
+                        gap: 8,
+                        padding: 8,
+                        borderBottom: '1px solid #1f2937',
+                      }}
+                    >
+                      <div
+                        style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {r.title || 'N/A'}
+                      </div>
+                      <div style={{ color: '#9aa4b2' }}>{r.size || '-'}</div>
+                      <div style={{ color: '#9aa4b2' }}>
+                        {typeof r.seeders === 'number' ? r.seeders : '-'}
+                      </div>
+                      <div>
+                        <button
+                          style={buttonStyle}
+                          onClick={() => alert('Grab coming soon')}
+                        >
+                          Grab
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {results.length === 0 && (
+                    <div style={{ padding: 12, color: '#9aa4b2' }}>
+                      No results.
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
             {kind === 'series' && (
               <div>

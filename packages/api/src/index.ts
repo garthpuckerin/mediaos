@@ -7,6 +7,7 @@ import Fastify from 'fastify';
 import libraryRoutes from './routes/library';
 import filesRoutes from './routes/files';
 import indexersRoutes from './routes/indexers';
+import settingsRoutes from './routes/settings';
 
 // Load environment variables
 dotenv.config();
@@ -40,6 +41,7 @@ await app.register(cors, {
 await app.register(libraryRoutes);
 await app.register(filesRoutes);
 await app.register(indexersRoutes, { prefix: '/api/indexers' });
+await app.register(settingsRoutes);
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {
