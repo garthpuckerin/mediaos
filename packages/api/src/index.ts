@@ -8,6 +8,8 @@ import libraryRoutes from './routes/library';
 import filesRoutes from './routes/files';
 import indexersRoutes from './routes/indexers';
 import settingsRoutes from './routes/settings';
+import downloadsRoutes from './routes/downloads';
+import qualityRoutes from './routes/quality';
 
 // Load environment variables
 dotenv.config();
@@ -42,6 +44,8 @@ await app.register(libraryRoutes);
 await app.register(filesRoutes);
 await app.register(indexersRoutes, { prefix: '/api/indexers' });
 await app.register(settingsRoutes);
+await app.register(downloadsRoutes);
+await app.register(qualityRoutes);
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {
