@@ -11,7 +11,9 @@ const QUALITY_FILE = path.join(CONFIG_DIR, 'quality.json');
 async function ensureDir(filePath: string) {
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-  } catch {}
+  } catch (_e) {
+    // ignore
+  }
 }
 
 async function loadProfiles(): Promise<Profiles> {
@@ -19,7 +21,7 @@ async function loadProfiles(): Promise<Profiles> {
     const raw = await fs.readFile(QUALITY_FILE, 'utf8');
     const json = JSON.parse(raw);
     return json || {};
-  } catch {
+  } catch (_e) {
     return {};
   }
 }
