@@ -35,3 +35,15 @@
     - Visual polish pass once data is present (hover/active states, focus order, a11y).
   - Owner: UI/Front-end
   - Status: In Progress
+
+- Quality verification (multi-phase)
+  - Context: Detect wrong/poor media at downloader, Arr, and player stages.
+  - Delivered now:
+    - RFC/backlog doc (docs/quality_verification_plan.md)
+    - API stub: POST /api/verify/check returning issues structure
+  - Next:
+    - UI affordance in Item Detail: "Verify Quality"
+    - Worker + ffprobe-style analysis and thresholds
+    - Persist last result per item; show in Library/Wanted
+  - Owner: API/Web
+  - Status: Planned

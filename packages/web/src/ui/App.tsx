@@ -1419,6 +1419,31 @@ function LibraryItemDetail({
                 style={buttonStyle}
                 onClick={async () => {
                   try {
+                    const res = await fetch('/api/verify/check', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ kind, id, title }),
+                    });
+                    const j = await res.json();
+                    if (j.ok) {
+                      const count = Array.isArray(j.result?.issues)
+                        ? j.result.issues.length
+                        : 0;
+                      alert(`Verification complete: ${count} issues`);
+                    } else {
+                      alert('Verification failed');
+                    }
+                  } catch (e) {
+                    alert((e as Error).message);
+                  }
+                }}
+              >
+                Verify Quality
+              </button>
+              <button
+                style={buttonStyle}
+                onClick={async () => {
+                  try {
                     const res = await fetch('/api/wanted', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },

@@ -12,6 +12,7 @@ import downloadsRoutes from './routes/downloads';
 import qualityRoutes from './routes/quality';
 import calendarRoutes from './routes/calendar';
 import wantedRoutes from './routes/wanted';
+import verifyRoutes from './routes/verify';
 
 // Load environment variables
 dotenv.config();
@@ -50,6 +51,7 @@ await app.register(downloadsRoutes);
 await app.register(qualityRoutes);
 await app.register(calendarRoutes, { prefix: '/api/calendar' });
 await app.register(wantedRoutes, { prefix: '/api/wanted' });
+await app.register(verifyRoutes);
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {
