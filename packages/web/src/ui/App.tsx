@@ -1176,11 +1176,10 @@ function LibraryList({
                   alt={it.title || 'Poster'}
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   onError={(e) => {
-                    (e.currentTarget as HTMLImageElement).style.display =
-                      'none';
-                    (
-                      e.currentTarget.parentElement as HTMLElement
-                    ).style.background = '#111827';
+                    const img = e.currentTarget as HTMLImageElement;
+                    img.style.display = 'none';
+                    const parent = img.parentElement;
+                    if (parent) (parent as HTMLElement).style.background = '#111827';
                   }}
                 />
               ) : (
