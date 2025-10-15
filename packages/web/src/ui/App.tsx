@@ -1284,7 +1284,8 @@ function LibraryItemDetail({
     let best: string | null = null;
     for (const q of Object.keys(qualityRank)) {
       if (s.includes(q)) {
-        if (!best || qualityRank[q] > qualityRank[best]) best = q;
+        const current = best ? qualityRank[best] : -Infinity;
+        if (qualityRank[q] > current) best = q;
       }
     }
     return best;
