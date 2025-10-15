@@ -22,7 +22,7 @@ function computeTopSeverity(issues: Issue[]): VerifyResult['topSeverity'] {
   let level: VerifyResult['topSeverity'] = 'none';
   for (const it of issues) {
     if (it.severity === 'error') return 'error';
-    if (it.severity === 'warn' && level !== 'error') level = 'warn';
+    if (it.severity === 'warn' && (level === 'none' || level === 'info')) level = 'warn';
     if (it.severity === 'info' && level === 'none') level = 'info';
   }
   return level;
@@ -41,4 +41,3 @@ export function runVerify(input: VerifyInput): VerifyResult {
   const topSeverity = computeTopSeverity(issues);
   return { phase: input.phase, issues, analyzedAt, topSeverity };
 }
-
