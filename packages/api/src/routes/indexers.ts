@@ -44,7 +44,17 @@ const plugin: FastifyPluginAsync = async (app) => {
     // TODO: call adapters; this is a stub
     return {
       ok: true,
-      results: [{ title: `RESULT for ${q}`, size: '1.4GB', seeders: 120 }],
+      results: [
+        {
+          title: `RESULT for ${q}`,
+          size: '1.4GB',
+          seeders: 120,
+          link:
+            'magnet:?xt=urn:btih:0000000000000000000000000000000000000000&dn=' +
+            encodeURIComponent(`RESULT for ${q}`),
+          protocol: 'torrent',
+        },
+      ],
     };
   });
 

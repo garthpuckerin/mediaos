@@ -147,6 +147,7 @@ export default function App() {
     { key: 'general', label: 'General' },
     { key: 'download-clients', label: 'Download Clients' },
     { key: 'indexers', label: 'Indexers' },
+    { key: 'quality', label: 'Quality' },
   ];
   const systemSubs = [
     { key: 'tasks', label: 'Tasks' },
@@ -535,6 +536,9 @@ export default function App() {
         </section>
       );
     }
+    if (page === 'quality') {
+      return <QualitySettings />;
+    }
     return (
       <section>
         <h2>Settings - {page.charAt(0).toUpperCase() + page.slice(1)}</h2>
@@ -870,6 +874,108 @@ function IndexersSettings() {
           <div style={{ color: '#9aa4b2' }}>No indexers added yet.</div>
         )}
       </div>
+    </section>
+  );
+}
+
+function QualitySettings() {
+  const [profiles, setProfiles] = React.useState<any | null>(null);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch('/api/settings/quality')
+      .then((r) => r.json())
+      .then((j) => setProfiles(j.profiles || {}))
+      .catch(() => setProfiles({}));
+  }, []);
+
+  const kinds: { key: KindKey; label: string }[] = [
+    { key: 'series', label: 'Series' },
+    { key: 'movies', label: 'Movies' },
+    { key: 'books', label: 'Books' },
+    { key: 'music', label: 'Music' },
+  ];
+
+  return (
+    <section>
+      <h2>Settings - Quality</h2>
+      {!profiles && <p style={{ color: '#9aa4b2' }}>Loading...</p>}
+      {profiles && (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setSaving(true);
+            try {
+              const form = e.target as HTMLFormElement;
+              const data = new FormData(form);
+              const toArray = (s: string) =>
+                s
+                  .split(',')
+                  .map((x) => x.trim())
+                  .filter(Boolean);
+              const payload: any = { profiles: {} };
+              for (const k of kinds) {
+                const allowed = String(data.get(`q.${k.key}.allowed`) || '');
+                const cutoff = String(data.get(`q.${k.key}.cutoff`) || '').trim();
+                if (allowed || cutoff) {
+                  payload.profiles[k.key] = {
+                    allowed: toArray(allowed),
+                    cutoff,
+                  };
+                }
+              }
+              const res = await fetch('/api/settings/quality', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+              if (!res.ok) throw new Error(await res.text());
+              const j = await res.json();
+              setProfiles(j.profiles || {});
+              alert('Saved');
+            } catch (err) {
+              alert((err as Error).message);
+            } finally {
+              setSaving(false);
+            }
+          }}
+          style={{ display: 'grid', gap: 16 }}
+        >
+          {kinds.map((k) => {
+            const p = (profiles as any)[k.key] || { allowed: [], cutoff: '' };
+            return (
+              <fieldset key={k.key} style={fieldsetStyle}>
+                <legend style={{ padding: '0 6px' }}>{k.label}</legend>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  <label>
+                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Allowed (comma-separated)</div>
+                    <input
+                      name={`q.${k.key}.allowed`}
+                      defaultValue={(p.allowed || []).join(', ')}
+                      placeholder="720p, 1080p, 2160p"
+                      style={inputStyle}
+                    />
+                  </label>
+                  <label>
+                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Cutoff</div>
+                    <input
+                      name={`q.${k.key}.cutoff`}
+                      defaultValue={p.cutoff || ''}
+                      placeholder="1080p"
+                      style={inputStyle}
+                    />
+                  </label>
+                </div>
+              </fieldset>
+            );
+          })}
+          <div>
+            <button type="submit" disabled={saving} style={buttonStyle}>
+              {saving ? 'Saving...' : 'Save Quality'}
+            </button>
+          </div>
+        </form>
+      )}
     </section>
   );
 }
@@ -1284,7 +1390,26 @@ function LibraryItemDetail({
                       <div>
                         <button
                           style={buttonStyle}
-                          onClick={() => alert('Grab coming soon')}
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/downloads/grab', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  kind,
+                                  id: '',
+                                  title: r.title,
+                                  link: (r as any).link,
+                                  protocol: (r as any).protocol || 'torrent',
+                                }),
+                              });
+                              const j = await res.json();
+                              if (j.ok) alert('Queued for download');
+                              else alert('Grab failed: ' + (j.error || 'unknown'));
+                            } catch (e) {
+                              alert((e as Error).message);
+                            }
+                          }}
                         >
                           Grab
                         </button>
