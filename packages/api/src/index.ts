@@ -14,6 +14,7 @@ import calendarRoutes from './routes/calendar';
 import wantedRoutes from './routes/wanted';
 import verifyRoutes from './routes/verify';
 import verifySettingsRoutes from './routes/verifySettings';
+import verifyJobsRoutes from './routes/verifyJobs';
 
 // Load environment variables
 dotenv.config();
@@ -54,6 +55,7 @@ await app.register(calendarRoutes, { prefix: '/api/calendar' });
 await app.register(wantedRoutes, { prefix: '/api/wanted' });
 await app.register(verifyRoutes);
 await app.register(verifySettingsRoutes);
+await app.register(verifyJobsRoutes);
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {

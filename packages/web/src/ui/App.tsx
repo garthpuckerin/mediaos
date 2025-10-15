@@ -1486,6 +1486,34 @@ function LibraryItemDetail({
                   ? `${(lastVerify.issues || []).length} issues — top severity: ${lastVerify.topSeverity || 'none'}`
                   : 'Run Verify Quality to generate a report.'}
               </div>
+              {lastVerify && Array.isArray(lastVerify.issues) && lastVerify.issues.length > 0 && (
+                <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                  {lastVerify.issues.map((it: any, idx: number) => (
+                    <li key={idx} style={{ marginBottom: 4 }}>
+                      <span
+                        style={{
+                          display: 'inline-block',
+                          padding: '2px 6px',
+                          borderRadius: 6,
+                          marginRight: 6,
+                          fontSize: 12,
+                          color: '#e5e7eb',
+                          background:
+                            it.severity === 'error'
+                              ? '#b91c1c'
+                              : it.severity === 'warn'
+                                ? '#b45309'
+                                : '#374151',
+                        }}
+                      >
+                        {String(it.severity || 'info').toUpperCase()}
+                      </span>
+                      <strong style={{ marginRight: 6 }}>{String(it.kind || 'unknown')}</strong>
+                      <span style={{ color: '#9aa4b2' }}>{String(it.message || '')}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div
               style={{
