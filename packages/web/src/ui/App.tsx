@@ -1237,6 +1237,7 @@ function LibraryItemDetail({
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<any[]>([]);
   const [searching, setSearching] = React.useState(false);
+  const [profiles, setProfiles] = React.useState<any | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1261,8 +1262,34 @@ function LibraryItemDetail({
     };
   }, [id]);
 
+  React.useEffect(() => {
+    fetch('/api/settings/quality')
+      .then((r) => r.json())
+      .then((j) => setProfiles(j.profiles || {}))
+      .catch(() => setProfiles({}));
+  }, []);
+
   const title = item?.title || 'Item';
   const poster = item?.posterUrl || null;
+
+  const qualityRank: Record<string, number> = {
+    '2160p': 4,
+    '1080p': 3,
+    '720p': 2,
+    '480p': 1,
+    sd: 1,
+  };
+
+  const detectQuality = (t: string): string | null => {
+    const s = (t || '').toLowerCase();
+    let best: string | null = null;
+    for (const q of Object.keys(qualityRank)) {
+      if (s.includes(q)) {
+        if (!best || qualityRank[q] > qualityRank[best]) best = q;
+      }
+    }
+    return best;
+  };
 
   return (
     <section>
@@ -1387,7 +1414,44 @@ function LibraryItemDetail({
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {r.title || 'N/A'}
+                        {(() => {
+                          const t = r.title || 'N/A';
+                          const q = detectQuality(String(t));
+                          const prof = (profiles || {})[kind as any] || {
+                            allowed: [],
+                            cutoff: '',
+                          };
+                          const allowedList = Array.isArray(prof.allowed)
+                            ? prof.allowed.map((x: any) => String(x).toLowerCase())
+                            : [];
+                          const cutoff = String(prof.cutoff || '').toLowerCase();
+                          const allowed =
+                            allowedList.length === 0 ||
+                            (q ? allowedList.includes(q) : false);
+                          const meetsCutoff = q && cutoff
+                            ? (qualityRank[q] || 0) >= (qualityRank[cutoff] || 0)
+                            : true;
+                          return (
+                            <>
+                              {t}
+                              {q && (
+                                <span style={{ color: '#9aa4b2', marginLeft: 6 }}>
+                                  [{q.toUpperCase()}]
+                                </span>
+                              )}
+                              {allowed && q && cutoff && !meetsCutoff && (
+                                <span style={{ color: '#f59e0b', marginLeft: 8 }}>
+                                  below cutoff
+                                </span>
+                              )}
+                              {!allowed && (
+                                <span style={{ color: '#ef4444', marginLeft: 8 }}>
+                                  not allowed
+                                </span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                       <div style={{ color: '#9aa4b2' }}>{r.size || '-'}</div>
                       <div style={{ color: '#9aa4b2' }}>
@@ -1416,6 +1480,19 @@ function LibraryItemDetail({
                               alert((e as Error).message);
                             }
                           }}
+                          disabled={(() => {
+                            const t = r.title || '';
+                            const q = detectQuality(String(t));
+                            const prof = (profiles || {})[kind as any] || {
+                              allowed: [],
+                              cutoff: '',
+                            };
+                            const allowedList = Array.isArray(prof.allowed)
+                              ? prof.allowed.map((x: any) => String(x).toLowerCase())
+                              : [];
+                            if (allowedList.length === 0) return false;
+                            return !(q && allowedList.includes(q));
+                          })()}
                         >
                           Grab
                         </button>
