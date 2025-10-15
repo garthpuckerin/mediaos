@@ -269,17 +269,46 @@ export default function App() {
     );
   };
 
-  const renderCalendar = () => (
-    <section>
-      <h2>Calendar</h2>
-      <p style={{ color: '#9aa4b2' }}>
-        No upcoming episodes. Calendar view coming soon.
-      </p>
-    </section>
-  );
+  const renderCalendar = () => {
+    const [events, setEvents] = React.useState<any[]>([]);
+    const [loadingCal, setLoadingCal] = React.useState(false);
+    React.useEffect(() => {
+      setLoadingCal(true);
+      fetch('/api/calendar')
+        .then((r) => r.json())
+        .then((j) => setEvents(Array.isArray(j.events) ? j.events : []))
+        .catch(() => setEvents([]))
+        .finally(() => setLoadingCal(false));
+    }, []);
+    return (
+      <section>
+        <h2>Calendar</h2>
+        {loadingCal && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
+        {!loadingCal && events.length === 0 && (
+          <p style={{ color: '#9aa4b2' }}>No upcoming episodes.</p>
+        )}
+        {!loadingCal && events.length > 0 && (
+          <div style={{ display: 'grid', gap: 8 }}>
+            {events.map((ev, i) => (
+              <div
+                key={i}
+                style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8 }}
+              >
+                <div style={{ color: '#9aa4b2', fontSize: 12 }}>{ev.date}</div>
+                <div>{ev.title}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  };
 
   const renderActivity = () => {
     const page = route.page || 'queue';
+    if (page === 'wanted') {
+      return <WantedPage />;
+    }
     return (
       <section>
         <h2>Activity - {page.charAt(0).toUpperCase() + page.slice(1)}</h2>
@@ -986,6 +1015,57 @@ function QualitySettings() {
   );
 }
 
+function WantedPage() {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  React.useEffect(() => {
+    setLoading(true);
+    fetch('/api/wanted')
+      .then((r) => r.json())
+      .then((j) => setItems(Array.isArray(j.items) ? j.items : []))
+      .catch(() => setItems([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const removeItem = async (kind: string, id: string) => {
+    try {
+      const res = await fetch(`/api/wanted/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const j = await res.json();
+      if (j.ok) setItems(Array.isArray(j.items) ? j.items : []);
+    } catch (_e) {
+      // ignore
+    }
+  };
+
+  return (
+    <section>
+      <h2>Activity - Wanted</h2>
+      {loading && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
+      {!loading && items.length === 0 && (
+        <p style={{ color: '#9aa4b2' }}>Nothing in Wanted.</p>
+      )}
+      {!loading && items.length > 0 && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {items.map((it) => (
+            <div
+              key={`${it.kind}:${it.id}`}
+              style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8 }}
+            >
+              <div style={{ color: '#9aa4b2', fontSize: 12 }}>{it.kind}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>{it.title}</div>
+                <button style={buttonStyle} onClick={() => removeItem(it.kind, it.id)}>Remove</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function LibraryList({
   kind,
   onOpenArtwork,
@@ -1332,6 +1412,25 @@ function LibraryItemDetail({
                 onClick={() => alert('Manual Search coming soon')}
               >
                 Manual Search
+              </button>
+              <button
+                style={buttonStyle}
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/wanted', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ kind, id, title }),
+                    });
+                    const j = await res.json();
+                    if (j.ok) alert('Added to Wanted');
+                    else alert('Failed to add to Wanted');
+                  } catch (e) {
+                    alert((e as Error).message);
+                  }
+                }}
+              >
+                Add to Wanted
               </button>
             </div>
           </div>
