@@ -269,40 +269,7 @@ export default function App() {
     );
   };
 
-  const renderCalendar = () => {
-    const [events, setEvents] = React.useState<any[]>([]);
-    const [loadingCal, setLoadingCal] = React.useState(false);
-    React.useEffect(() => {
-      setLoadingCal(true);
-      fetch('/api/calendar')
-        .then((r) => r.json())
-        .then((j) => setEvents(Array.isArray(j.events) ? j.events : []))
-        .catch(() => setEvents([]))
-        .finally(() => setLoadingCal(false));
-    }, []);
-    return (
-      <section>
-        <h2>Calendar</h2>
-        {loadingCal && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
-        {!loadingCal && events.length === 0 && (
-          <p style={{ color: '#9aa4b2' }}>No upcoming episodes.</p>
-        )}
-        {!loadingCal && events.length > 0 && (
-          <div style={{ display: 'grid', gap: 8 }}>
-            {events.map((ev, i) => (
-              <div
-                key={i}
-                style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8 }}
-              >
-                <div style={{ color: '#9aa4b2', fontSize: 12 }}>{ev.date}</div>
-                <div>{ev.title}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-    );
-  };
+  const renderCalendar = () => <CalendarPage />;
 
   const renderActivity = () => {
     const page = route.page || 'queue';
@@ -1058,6 +1025,41 @@ function WantedPage() {
                 <div>{it.title}</div>
                 <button style={buttonStyle} onClick={() => removeItem(it.kind, it.id)}>Remove</button>
               </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CalendarPage() {
+  const [events, setEvents] = React.useState<any[]>([]);
+  const [loadingCal, setLoadingCal] = React.useState(false);
+  React.useEffect(() => {
+    setLoadingCal(true);
+    fetch('/api/calendar')
+      .then((r) => r.json())
+      .then((j) => setEvents(Array.isArray(j.events) ? j.events : []))
+      .catch(() => setEvents([]))
+      .finally(() => setLoadingCal(false));
+  }, []);
+  return (
+    <section>
+      <h2>Calendar</h2>
+      {loadingCal && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
+      {!loadingCal && events.length === 0 && (
+        <p style={{ color: '#9aa4b2' }}>No upcoming episodes.</p>
+      )}
+      {!loadingCal && events.length > 0 && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {events.map((ev, i) => (
+            <div
+              key={i}
+              style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8 }}
+            >
+              <div style={{ color: '#9aa4b2', fontSize: 12 }}>{ev.date}</div>
+              <div>{ev.title}</div>
             </div>
           ))}
         </div>
