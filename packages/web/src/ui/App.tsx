@@ -1318,6 +1318,7 @@ function LibraryItemDetail({
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<any[]>([]);
   const [searching, setSearching] = React.useState(false);
+  const [lastVerify, setLastVerify] = React.useState<any | null>(null);
   const [profiles, setProfiles] = React.useState<any | null>(null);
 
   React.useEffect(() => {
@@ -1349,6 +1350,13 @@ function LibraryItemDetail({
       .then((j) => setProfiles(j.profiles || {}))
       .catch(() => setProfiles({}));
   }, []);
+
+  React.useEffect(() => {
+    fetch(`/api/verify/last?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`)
+      .then((r) => r.json())
+      .then((j) => setLastVerify(j.result || null))
+      .catch(() => setLastVerify(null));
+  }, [kind, id]);
 
   const title = item?.title || 'Item';
   const poster = item?.posterUrl || null;
@@ -1465,6 +1473,19 @@ function LibraryItemDetail({
             <h2 style={{ marginTop: 0 }}>{title}</h2>
             <div style={{ color: '#9aa4b2', marginBottom: 12 }}>
               Kind: {kind}
+            </div>
+            <div style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8, marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong>Quality Verification</strong>
+                <span style={{ color: '#9aa4b2', fontSize: 12 }}>
+                  {lastVerify?.analyzedAt ? new Date(lastVerify.analyzedAt).toLocaleString() : 'No result'}
+                </span>
+              </div>
+              <div style={{ color: '#9aa4b2', marginTop: 6 }}>
+                {lastVerify
+                  ? `${(lastVerify.issues || []).length} issues — top severity: ${lastVerify.topSeverity || 'none'}`
+                  : 'Run Verify Quality to generate a report.'}
+              </div>
             </div>
             <div
               style={{
