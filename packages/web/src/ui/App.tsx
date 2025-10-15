@@ -44,6 +44,12 @@ const subNavItemStyle: React.CSSProperties = {
   marginRight: 8,
 };
 
+const fieldsetStyle: React.CSSProperties = {
+  border: '1px solid #1f2937',
+  borderRadius: 8,
+  padding: 8,
+};
+
 type TopKey = 'library' | 'calendar' | 'activity' | 'settings' | 'system';
 type KindKey = 'series' | 'movies' | 'books' | 'music';
 type Route = { top: TopKey; kind?: KindKey; page?: string; id?: string };
