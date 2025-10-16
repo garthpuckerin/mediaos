@@ -93,7 +93,7 @@ function stubProbe(input: VerifyInput): ProbeMetadata | undefined {
   return md;
 }
 
-export function runVerify(input: VerifyInput): VerifyResult {
+export function runVerify(input: VerifyInput, providedMd?: ProbeMetadata): VerifyResult {
   const issues: Issue[] = [];
   const t = (input.title || '').toLowerCase();
   if (t.includes('sample')) {
@@ -108,7 +108,7 @@ export function runVerify(input: VerifyInput): VerifyResult {
     minBitrateKbpsByHeight: input?.settings?.minBitrateKbpsByHeight || { '720': 1500, '1080': 2500, '2160': 8000 },
     allowedContainers: input?.settings?.allowedContainers || ['mp4', 'mkv'],
   };
-  const md = stubProbe(input);
+  const md = providedMd || stubProbe(input);
   issues.push(...assessMetadata(md, thresholds));
   const analyzedAt = new Date().toISOString();
   const topSeverity = computeTopSeverity(issues);
