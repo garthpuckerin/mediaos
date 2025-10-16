@@ -66,17 +66,21 @@ export async function probeMedia(req: ProbeRequest): Promise<ProbeMetadata> {
     }
     if (Object.keys(v).length > 0) md.video = v;
     if (audioStreams.length > 0) {
-      md.audio = audioStreams.map((a) => ({
-        codec: a.codec_name ? String(a.codec_name) : undefined,
-        channels: typeof a.channels === 'number' ? a.channels : undefined,
-        language: a.tags?.language ? String(a.tags.language) : undefined,
-      }));
+      md.audio = audioStreams.map((a) => {
+        const o: any = {};
+        if (a.codec_name) o.codec = String(a.codec_name);
+        if (typeof a.channels === 'number') o.channels = a.channels;
+        if (a.tags?.language) o.language = String(a.tags.language);
+        return o;
+      });
     }
     if (subStreams.length > 0) {
-      md.subtitles = subStreams.map((s) => ({
-        language: s.tags?.language ? String(s.tags.language) : undefined,
-        forced: s.disposition?.forced === 1 ? true : undefined,
-      }));
+      md.subtitles = subStreams.map((s) => {
+        const o: any = {};
+        if (s.tags?.language) o.language = String(s.tags.language);
+        if (s.disposition?.forced === 1) o.forced = true;
+        return o;
+      });
     }
     return md;
   } catch (_e) {
