@@ -46,7 +46,7 @@ export async function probeMedia(req: ProbeRequest): Promise<ProbeMetadata> {
     const audioStreams = streams.filter((s) => s.codec_type === 'audio');
     const subStreams = streams.filter((s) => s.codec_type === 'subtitle');
     const md: ProbeMetadata = {
-      container: format.format_name,
+      container: format.format_name || undefined,
       durationSec: format.duration ? Math.floor(Number(format.duration)) : undefined,
       video: (() => {
         const v: any = {};
@@ -63,11 +63,11 @@ export async function probeMedia(req: ProbeRequest): Promise<ProbeMetadata> {
         return v;
       })(),
       audio: audioStreams.map((a) => ({
-        codec: a.codec_name,
-        channels: a.channels,
-        language: a.tags?.language,
+        codec: a.codec_name || undefined,
+        channels: typeof a.channels === 'number' ? a.channels : undefined,
+        language: a.tags?.language || undefined,
       })),
-      subtitles: subStreams.map((s) => ({ language: s.tags?.language })),
+      subtitles: subStreams.map((s) => ({ language: s.tags?.language || undefined })),
     };
     return md;
   } catch (_e) {
