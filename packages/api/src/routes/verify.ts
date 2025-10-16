@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { runVerify } from '../services/verify';
 import { loadVerifyResults, saveLastVerifyResult, loadVerifySettings } from '../services/verifyStore';
+import { probeMedia, probeMediaStub } from '@mediaos/workers';
 
 // settings are loaded via services/verifyStore
 
@@ -11,10 +12,18 @@ const plugin: FastifyPluginAsync = async (app) => {
     const kind = String(b.kind || '');
     const id = String(b.id || '');
     const title = String(b.title || '');
+    const filePath = typeof b.path === 'string' ? b.path : undefined;
     if (!kind || !id) return { ok: false, error: 'missing_params' };
 
     const settings = await loadVerifySettings();
-    const result = runVerify({ phase, kind, id, title, settings });
+    let result;
+    if (filePath) {
+      const md = await probeMedia({ kind, id, title, path: filePath });
+      result = runVerify({ phase, kind, id, title, settings }, md as any);
+    } else {
+      const md = await probeMediaStub({ kind, id, title });
+      result = runVerify({ phase, kind, id, title, settings }, md as any);
+    }
 
     // persist last result
     const key = `${kind}:${id}`;

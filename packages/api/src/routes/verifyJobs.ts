@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { runVerify } from '../services/verify';
 import { saveLastVerifyResult, loadVerifySettings } from '../services/verifyStore';
-import { probeMediaStub } from '@mediaos/workers';
+import { probeMedia } from '@mediaos/workers';
 
 type Job = {
   id: string;
@@ -25,6 +25,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     const kind = String(b.kind || '');
     const id = String(b.id || '');
     const title = String(b.title || '');
+    const filePath = typeof b.path === 'string' ? b.path : undefined;
     const phase = (String(b.phase || 'all') as any) || 'all';
     if (!kind || !id) return { ok: false, error: 'missing_params' };
 
@@ -32,7 +33,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     const job: Job = {
       id: jobId,
       status: 'queued',
-      input: { phase, kind, id, title },
+      input: { phase, kind, id, title, path: filePath },
       enqueuedAt: new Date().toISOString(),
     };
     jobs.set(jobId, job);
@@ -42,7 +43,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       if (!j) return;
       j.status = 'running';
       try {
-        const md = await probeMediaStub({ kind: j.input.kind, id: j.input.id, title: j.input.title });
+        const md = await probeMedia({ kind: j.input.kind, id: j.input.id, title: j.input.title, path: j.input.path });
         const settings = await loadVerifySettings();
         const result = runVerify({ ...j.input, settings }, md as any);
         j.result = result;
