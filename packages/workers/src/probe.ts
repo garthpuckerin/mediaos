@@ -45,30 +45,39 @@ export async function probeMedia(req: ProbeRequest): Promise<ProbeMetadata> {
     const video = streams.find((s) => s.codec_type === 'video') || {};
     const audioStreams = streams.filter((s) => s.codec_type === 'audio');
     const subStreams = streams.filter((s) => s.codec_type === 'subtitle');
-    const md: ProbeMetadata = {
-      container: format.format_name || undefined,
-      durationSec: format.duration ? Math.floor(Number(format.duration)) : undefined,
-      video: (() => {
-        const v: any = {};
-        if (video.codec_name) v.codec = String(video.codec_name);
-        if (typeof video.width === 'number') v.width = video.width;
-        if (typeof video.height === 'number') v.height = video.height;
-        const br = video.bit_rate ? Math.floor(Number(video.bit_rate) / 1000) : undefined;
-        if (typeof br === 'number') v.bitrateKbps = br;
-        if (video.r_frame_rate && typeof video.r_frame_rate === 'string') {
-          const [a, b] = video.r_frame_rate.split('/').map((x: string) => Number(x));
-          const fr = b ? a / b : a;
-          if (Number.isFinite(fr)) v.framerate = fr;
-        }
-        return v;
-      })(),
-      audio: audioStreams.map((a) => ({
-        codec: a.codec_name || undefined,
+    const md: ProbeMetadata = {};
+    if (format.format_name) md.container = String(format.format_name);
+    if (format.duration) {
+      const d = Math.floor(Number(format.duration));
+      if (Number.isFinite(d)) md.durationSec = d;
+    }
+    const v: any = {};
+    if (video.codec_name) v.codec = String(video.codec_name);
+    if (typeof video.width === 'number') v.width = video.width;
+    if (typeof video.height === 'number') v.height = video.height;
+    if (video.bit_rate) {
+      const br = Math.floor(Number(video.bit_rate) / 1000);
+      if (Number.isFinite(br)) v.bitrateKbps = br;
+    }
+    if (video.r_frame_rate && typeof video.r_frame_rate === 'string') {
+      const [a, b] = video.r_frame_rate.split('/').map((x: string) => Number(x));
+      const fr = b ? a / b : a;
+      if (Number.isFinite(fr)) v.framerate = fr;
+    }
+    if (Object.keys(v).length > 0) md.video = v;
+    if (audioStreams.length > 0) {
+      md.audio = audioStreams.map((a) => ({
+        codec: a.codec_name ? String(a.codec_name) : undefined,
         channels: typeof a.channels === 'number' ? a.channels : undefined,
-        language: a.tags?.language || undefined,
-      })),
-      subtitles: subStreams.map((s) => ({ language: s.tags?.language || undefined })),
-    };
+        language: a.tags?.language ? String(a.tags.language) : undefined,
+      }));
+    }
+    if (subStreams.length > 0) {
+      md.subtitles = subStreams.map((s) => ({
+        language: s.tags?.language ? String(s.tags.language) : undefined,
+        forced: s.disposition?.forced === 1 ? true : undefined,
+      }));
+    }
     return md;
   } catch (_e) {
     return probeMediaStub(req);
