@@ -1,21 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { runVerify } from '../services/verify';
-import { loadVerifyResults, saveLastVerifyResult } from '../services/verifyStore';
+import { loadVerifyResults, saveLastVerifyResult, loadVerifySettings } from '../services/verifyStore';
 
-import { promises as fs } from 'fs';
-import path from 'path';
-const CONFIG_DIR = path.join(process.cwd(), 'config');
-const VERIFY_SETTINGS = path.join(CONFIG_DIR, 'verify.json');
-
-async function loadVerifySettings(): Promise<any> {
-  try {
-    const raw = await fs.readFile(VERIFY_SETTINGS, 'utf8');
-    const json = JSON.parse(raw);
-    return json || {};
-  } catch (_e) {
-    return {};
-  }
-}
+// settings are loaded via services/verifyStore
 
 const plugin: FastifyPluginAsync = async (app) => {
   app.post('/api/verify/check', async (req) => {

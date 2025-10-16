@@ -3,6 +3,7 @@ import path from 'path';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
 const VERIFY_RESULTS = path.join(CONFIG_DIR, 'verify-results.json');
+const VERIFY_SETTINGS = path.join(CONFIG_DIR, 'verify.json');
 
 async function ensureDir(filePath: string) {
   try {
@@ -33,3 +34,17 @@ export async function saveLastVerifyResult(key: string, value: any) {
   await saveVerifyResults(map);
 }
 
+export async function loadVerifySettings(): Promise<any> {
+  try {
+    const raw = await fs.readFile(VERIFY_SETTINGS, 'utf8');
+    const json = JSON.parse(raw);
+    return json || {};
+  } catch (_e) {
+    return {};
+  }
+}
+
+export async function saveVerifySettings(settings: any) {
+  await ensureDir(VERIFY_SETTINGS);
+  await fs.writeFile(VERIFY_SETTINGS, JSON.stringify(settings, null, 2), 'utf8');
+}

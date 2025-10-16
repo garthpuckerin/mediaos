@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { runVerify } from '../services/verify';
-import { saveLastVerifyResult } from '../services/verifyStore';
+import { saveLastVerifyResult, loadVerifySettings } from '../services/verifyStore';
 import { probeMediaStub } from '@mediaos/workers';
 
 type Job = {
@@ -43,7 +43,8 @@ const plugin: FastifyPluginAsync = async (app) => {
       j.status = 'running';
       try {
         const md = await probeMediaStub({ kind: j.input.kind, id: j.input.id, title: j.input.title });
-        const result = runVerify(j.input, md as any);
+        const settings = await loadVerifySettings();
+        const result = runVerify({ ...j.input, settings }, md as any);
         j.result = result;
         j.status = 'completed';
         j.finishedAt = new Date().toISOString();
