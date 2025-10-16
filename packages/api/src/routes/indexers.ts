@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 type Indexer = {
   id: string;
@@ -39,22 +41,85 @@ const plugin: FastifyPluginAsync = async (app) => {
     const schema = z.object({
       q: z.string().min(2),
       cat: z.string().optional(),
+      kind: z.string().optional(),
+      serverFilter: z.boolean().optional(),
     });
-    const { q } = schema.parse(req.body);
+    const { q, kind, serverFilter } = schema.parse(req.body);
     // TODO: call adapters; this is a stub
+    let results = [
+      {
+        title: `RESULT 2160p for ${q}`,
+        size: '3.2GB',
+        seeders: 320,
+        link:
+          'magnet:?xt=urn:btih:1111111111111111111111111111111111111111&dn=' +
+          encodeURIComponent(`RESULT 2160p for ${q}`),
+        protocol: 'torrent',
+      },
+      {
+        title: `RESULT 1080p for ${q}`,
+        size: '1.4GB',
+        seeders: 120,
+        link:
+          'magnet:?xt=urn:btih:2222222222222222222222222222222222222222&dn=' +
+          encodeURIComponent(`RESULT 1080p for ${q}`),
+        protocol: 'torrent',
+      },
+      {
+        title: `RESULT 720p for ${q}`,
+        size: '800MB',
+        seeders: 75,
+        link:
+          'magnet:?xt=urn:btih:3333333333333333333333333333333333333333&dn=' +
+          encodeURIComponent(`RESULT 720p for ${q}`),
+        protocol: 'torrent',
+      },
+    ];
+
+    if (serverFilter && kind) {
+      // Load quality profiles
+      const CONFIG_DIR = path.join(process.cwd(), 'config');
+      const QUALITY_FILE = path.join(CONFIG_DIR, 'quality.json');
+      let profiles: any = {};
+      try {
+        const raw = await fs.readFile(QUALITY_FILE, 'utf8');
+        const json = JSON.parse(raw);
+        profiles = json || {};
+      } catch (_e) {
+        profiles = {};
+      }
+      const prof = (profiles as any)[kind] || { allowed: [], cutoff: '' };
+      const allowedList = Array.isArray(prof.allowed)
+        ? prof.allowed.map((x: any) => String(x).toLowerCase())
+        : [];
+      const qualityRank: Record<string, number> = {
+        '2160p': 4,
+        '1080p': 3,
+        '720p': 2,
+        '480p': 1,
+        sd: 1,
+      };
+      const detectQuality = (t: string): string | null => {
+        const s = (t || '').toLowerCase();
+        let best: string | null = null;
+        for (const qk of Object.keys(qualityRank)) {
+          if (s.includes(qk)) {
+            const cur = best ? qualityRank[best] ?? -Infinity : -Infinity;
+            if (qualityRank[qk] > cur) best = qk;
+          }
+        }
+        return best;
+      };
+      results = results.filter((r) => {
+        if (allowedList.length === 0) return true;
+        const qd = detectQuality(String((r as any).title || ''));
+        return !!(qd && allowedList.includes(qd));
+      });
+    }
+
     return {
       ok: true,
-      results: [
-        {
-          title: `RESULT for ${q}`,
-          size: '1.4GB',
-          seeders: 120,
-          link:
-            'magnet:?xt=urn:btih:0000000000000000000000000000000000000000&dn=' +
-            encodeURIComponent(`RESULT for ${q}`),
-          protocol: 'torrent',
-        },
-      ],
+      results,
     };
   });
 

@@ -1,4 +1,5 @@
 import type { FastifyPluginAsync } from 'fastify';
+import { qbittorrent } from '@mediaos/adapters/src/downloaders';
 
 const plugin: FastifyPluginAsync = async (app) => {
   app.post('/api/downloads/grab', async (req) => {
@@ -11,9 +12,20 @@ const plugin: FastifyPluginAsync = async (app) => {
       (String(body.protocol || '').toLowerCase() as 'torrent' | 'usenet') ||
       'torrent';
     if (!title || !link) return { ok: false, error: 'missing_params' };
-    // TODO: dispatch to client adapters (qBittorrent/SABnzbd/NZBGet)
-    app.log.info({ kind, id, title, link, protocol }, 'GRAB_REQUEST');
-    return { ok: true, queued: true };
+    // Dispatch minimal support: Torrent magnet via qBittorrent stub
+    try {
+      if (protocol === 'torrent' && link.startsWith('magnet:')) {
+        const res = await qbittorrent.addMagnet(link);
+        app.log.info({ kind, id, title, link, protocol, res }, 'GRAB_TORRENT');
+        return { ok: !!res.ok, queued: !!res.ok };
+      }
+      // Future: support NZB via SABnzbd/NZBGet and .torrent URLs
+      app.log.warn({ kind, id, title, link, protocol }, 'GRAB_UNSUPPORTED');
+      return { ok: false, error: 'unsupported_link_or_protocol' };
+    } catch (e) {
+      app.log.error({ err: e, link, protocol }, 'GRAB_FAILED');
+      return { ok: false, error: (e as Error).message };
+    }
   });
 };
 
