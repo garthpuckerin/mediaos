@@ -1319,6 +1319,7 @@ function LibraryItemDetail({
   const [results, setResults] = React.useState<any[]>([]);
   const [searching, setSearching] = React.useState(false);
   const [lastVerify, setLastVerify] = React.useState<any | null>(null);
+  const [verifyJob, setVerifyJob] = React.useState<{ id: string; status: string } | null>(null);
   const [profiles, setProfiles] = React.useState<any | null>(null);
 
   React.useEffect(() => {
@@ -1447,6 +1448,48 @@ function LibraryItemDetail({
                 }}
               >
                 Verify Quality
+              </button>
+              <button
+                style={buttonStyle}
+                disabled={!!verifyJob && verifyJob.status !== 'completed' && verifyJob.status !== 'failed'}
+                onClick={async () => {
+                  try {
+                    setVerifyJob({ id: '', status: 'queued' });
+                    const res = await fetch('/api/verify/jobs', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ kind, id, title, phase: 'all' }),
+                    });
+                    const j = await res.json();
+                    if (!j.ok) throw new Error(j.error || 'failed');
+                    const jobId = j.jobId as string;
+                    setVerifyJob({ id: jobId, status: 'queued' });
+                    const start = Date.now();
+                    const poll = async () => {
+                      try {
+                        const r2 = await fetch(`/api/verify/jobs/${encodeURIComponent(jobId)}`);
+                        const j2 = await r2.json();
+                        if (j2.ok && j2.job) {
+                          setVerifyJob({ id: jobId, status: j2.job.status });
+                          if (j2.job.status === 'completed' || j2.job.status === 'failed') {
+                            // refresh last verify panel
+                            const r3 = await fetch(`/api/verify/last?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`);
+                            const j3 = await r3.json();
+                            setLastVerify(j3.result || null);
+                            return;
+                          }
+                        }
+                      } catch {}
+                      if (Date.now() - start < 15000) setTimeout(poll, 1000);
+                      else setVerifyJob((v) => (v ? { ...v, status: 'failed' } : v));
+                    };
+                    setTimeout(poll, 500);
+                  } catch (e) {
+                    alert((e as Error).message);
+                  }
+                }}
+              >
+                {verifyJob && verifyJob.status !== 'completed' && verifyJob.status !== 'failed' ? 'Verifying…' : 'Verify (Async)'}
               </button>
               <button
                 style={buttonStyle}
