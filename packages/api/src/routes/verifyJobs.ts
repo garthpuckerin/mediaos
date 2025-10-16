@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { runVerify } from '../services/verify';
+import { saveLastVerifyResult } from '../services/verifyStore';
 
 type Job = {
   id: string;
@@ -44,6 +45,8 @@ const plugin: FastifyPluginAsync = async (app) => {
         j.result = result;
         j.status = 'completed';
         j.finishedAt = new Date().toISOString();
+        const key = `${j.input.kind}:${j.input.id}`;
+        await saveLastVerifyResult(key, { ...result, ...j.input });
       } catch (e) {
         j.status = 'failed';
         j.error = (e as Error).message;
@@ -65,4 +68,3 @@ const plugin: FastifyPluginAsync = async (app) => {
 };
 
 export default plugin;
-
