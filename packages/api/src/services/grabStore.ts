@@ -7,7 +7,10 @@ const GRABS_FILE = path.join(CONFIG_DIR, 'grabs.json');
 async function ensureDir(filePath: string) {
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-  } catch {}
+  } catch (_e) {
+    // ignore ensureDir errors (race conditions)
+    void 0;
+  }
 }
 
 export async function loadGrabs(): Promise<any> {
@@ -26,4 +29,3 @@ export async function saveGrab(key: string, grab: any) {
   await ensureDir(GRABS_FILE);
   await fs.writeFile(GRABS_FILE, JSON.stringify(map, null, 2), 'utf8');
 }
-
