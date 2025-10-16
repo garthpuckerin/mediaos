@@ -1479,7 +1479,9 @@ function LibraryItemDetail({
                             return;
                           }
                         }
-                      } catch {}
+                      } catch (_e) {
+                        void 0;
+                      }
                       if (Date.now() - start < 15000) setTimeout(poll, 1000);
                       else setVerifyJob((v) => (v ? { ...v, status: 'failed' } : v));
                     };
