@@ -51,6 +51,34 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, items };
   });
 
+  app.post('/scan', async (req) => {
+    const b = (req.body || {}) as any;
+    const enqueue = !!b.enqueue;
+    const items = await loadWanted();
+    const results: any[] = [];
+    for (const it of items) {
+      // Minimal scan: reuse simple titles to form a matched result (stub)
+      const found = [
+        { title: `${it.title} 1080p`, protocol: 'torrent', link: 'magnet:?xt=urn:btih:222...' },
+      ];
+      let grabbed = 0;
+      if (enqueue && found.length > 0) {
+        try {
+          const first = found[0];
+          const res = await app.inject({
+            method: 'POST',
+            url: '/api/downloads/grab',
+            payload: { kind: it.kind, id: it.id, title: first.title, link: first.link, protocol: first.protocol },
+          });
+          const j = res.json() as any;
+          if (j && j.ok) grabbed = 1;
+        } catch {}
+      }
+      results.push({ key: `${it.kind}:${it.id}`, found: found.length, grabbed });
+    }
+    return { ok: true, scanned: items.length, results };
+  });
+
   app.delete('/:kind/:id', async (req) => {
     const params = (req.params || {}) as any;
     const id = String(params.id || '').trim();
@@ -63,4 +91,3 @@ const plugin: FastifyPluginAsync = async (app) => {
 };
 
 export default plugin;
-

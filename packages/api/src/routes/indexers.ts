@@ -46,7 +46,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     });
     const { q, kind, serverFilter } = schema.parse(req.body);
     // TODO: call adapters; this is a stub
-    let results = [
+  let results = [
       {
         title: `RESULT 2160p for ${q}`,
         size: '3.2GB',
@@ -73,6 +73,13 @@ const plugin: FastifyPluginAsync = async (app) => {
           'magnet:?xt=urn:btih:3333333333333333333333333333333333333333&dn=' +
           encodeURIComponent(`RESULT 720p for ${q}`),
         protocol: 'torrent',
+      },
+      {
+        title: `USENET 1080p for ${q}`,
+        size: '1.2GB',
+        seeders: 0,
+        link: 'https://example.com/fakefile.nzb',
+        protocol: 'usenet',
       },
     ];
 
