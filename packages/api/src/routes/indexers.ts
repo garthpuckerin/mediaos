@@ -104,8 +104,9 @@ const plugin: FastifyPluginAsync = async (app) => {
         let best: string | null = null;
         for (const qk of Object.keys(qualityRank)) {
           if (s.includes(qk)) {
-            const cur = best && typeof qualityRank[best] === 'number' ? (qualityRank as any)[best] : -Infinity;
-            if (qualityRank[qk] > cur) best = qk;
+            const cur = best && typeof (qualityRank as any)[best] === 'number' ? (qualityRank as any)[best] : -Infinity;
+            const next = (qualityRank as any)[qk];
+            if (typeof next === 'number' && next > cur) best = qk;
           }
         }
         return best;
