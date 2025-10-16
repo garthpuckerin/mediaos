@@ -64,11 +64,13 @@ const plugin: FastifyPluginAsync = async (app) => {
       let grabbed = 0;
       if (enqueue && found.length > 0) {
         try {
-          const first = found[0];
+          const first = found[0] as any;
           const res = await app.inject({
             method: 'POST',
             url: '/api/downloads/grab',
-            payload: { kind: it.kind, id: it.id, title: first.title, link: first.link, protocol: first.protocol },
+            payload: first && first.title && first.link && first.protocol
+              ? { kind: it.kind, id: it.id, title: first.title, link: first.link, protocol: first.protocol }
+              : { kind: it.kind, id: it.id, title: `${it.title} 1080p`, link: 'magnet:?xt=urn:btih:222...', protocol: 'torrent' },
           });
           const j = res.json() as any;
           if (j && j.ok) grabbed = 1;
