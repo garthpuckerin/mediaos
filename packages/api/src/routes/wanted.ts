@@ -72,7 +72,10 @@ const plugin: FastifyPluginAsync = async (app) => {
           });
           const j = res.json() as any;
           if (j && j.ok) grabbed = 1;
-        } catch {}
+        } catch (_e) {
+          // ignore enqueue errors
+          void 0;
+        }
       }
       results.push({ key: `${it.kind}:${it.id}`, found: found.length, grabbed });
     }
