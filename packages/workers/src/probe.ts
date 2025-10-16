@@ -48,18 +48,20 @@ export async function probeMedia(req: ProbeRequest): Promise<ProbeMetadata> {
     const md: ProbeMetadata = {
       container: format.format_name,
       durationSec: format.duration ? Math.floor(Number(format.duration)) : undefined,
-      video: {
-        codec: video.codec_name,
-        width: video.width,
-        height: video.height,
-        bitrateKbps: video.bit_rate ? Math.floor(Number(video.bit_rate) / 1000) : undefined,
-        framerate: video.r_frame_rate && typeof video.r_frame_rate === 'string'
-          ? (() => {
-              const [a, b] = video.r_frame_rate.split('/').map((x: string) => Number(x));
-              return b ? a / b : a;
-            })()
-          : undefined,
-      },
+      video: (() => {
+        const v: any = {};
+        if (video.codec_name) v.codec = String(video.codec_name);
+        if (typeof video.width === 'number') v.width = video.width;
+        if (typeof video.height === 'number') v.height = video.height;
+        const br = video.bit_rate ? Math.floor(Number(video.bit_rate) / 1000) : undefined;
+        if (typeof br === 'number') v.bitrateKbps = br;
+        if (video.r_frame_rate && typeof video.r_frame_rate === 'string') {
+          const [a, b] = video.r_frame_rate.split('/').map((x: string) => Number(x));
+          const fr = b ? a / b : a;
+          if (Number.isFinite(fr)) v.framerate = fr;
+        }
+        return v;
+      })(),
       audio: audioStreams.map((a) => ({
         codec: a.codec_name,
         channels: a.channels,
