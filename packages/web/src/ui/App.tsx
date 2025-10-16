@@ -1439,6 +1439,7 @@ function LibraryItemDetail({
   const [query, setQuery] = React.useState('');
   const [results, setResults] = React.useState<any[]>([]);
   const [searching, setSearching] = React.useState(false);
+  const [serverFilter, setServerFilter] = React.useState(false);
   const [lastVerify, setLastVerify] = React.useState<any | null>(null);
   const [verifyJob, setVerifyJob] = React.useState<{ id: string; status: string } | null>(null);
   const [profiles, setProfiles] = React.useState<any | null>(null);
@@ -1698,7 +1699,7 @@ function LibraryItemDetail({
                     const r = await fetch('/api/indexers/search', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ q: query.trim() }),
+                      body: JSON.stringify({ q: query.trim(), kind, serverFilter }),
                     });
                     const j = await r.json();
                     setResults(Array.isArray(j.results) ? j.results : []);
@@ -1720,6 +1721,16 @@ function LibraryItemDetail({
                   {searching ? 'Searching…' : 'Search'}
                 </button>
               </form>
+              <div style={{ margin: '4px 0 8px' }}>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={serverFilter}
+                    onChange={(e) => setServerFilter(e.target.checked)}
+                  />
+                  <span style={{ color: '#9aa4b2' }}>Server filter by Quality</span>
+                </label>
+              </div>
               <div style={{ border: '1px solid #1f2937', borderRadius: 8 }}>
                 <div
                   style={{

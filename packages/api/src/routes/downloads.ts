@@ -1,5 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import { qbittorrent } from '@mediaos/adapters/src/downloaders';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 const plugin: FastifyPluginAsync = async (app) => {
   app.post('/api/downloads/grab', async (req) => {
@@ -15,7 +17,27 @@ const plugin: FastifyPluginAsync = async (app) => {
     // Dispatch minimal support: Torrent magnet via qBittorrent stub
     try {
       if (protocol === 'torrent' && link.startsWith('magnet:')) {
-        const res = await qbittorrent.addMagnet(link);
+        // Load downloader settings (qBittorrent)
+        const CONFIG_DIR = path.join(process.cwd(), 'config');
+        const DL_FILE = path.join(CONFIG_DIR, 'downloaders.json');
+        let cfg: any = {};
+        try {
+          const raw = await fs.readFile(DL_FILE, 'utf8');
+          cfg = JSON.parse(raw) || {};
+        } catch (_e) {
+          cfg = {};
+        }
+        const qbc = cfg.qbittorrent || {};
+        if (!qbc.enabled || !qbc.baseUrl) {
+          app.log.warn({ reason: 'qbittorrent_not_configured' }, 'GRAB_UNSUPPORTED');
+          return { ok: false, error: 'qbittorrent_not_configured' };
+        }
+        const res = await qbittorrent.addMagnet(link, undefined, {
+          baseUrl: String(qbc.baseUrl),
+          username: qbc.username || undefined,
+          password: qbc.password || undefined,
+          timeoutMs: typeof qbc.timeoutMs === 'number' ? qbc.timeoutMs : undefined,
+        });
         app.log.info({ kind, id, title, link, protocol, res }, 'GRAB_TORRENT');
         return { ok: !!res.ok, queued: !!res.ok };
       }
