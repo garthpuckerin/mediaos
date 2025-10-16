@@ -55,7 +55,8 @@ export const qbittorrent: TorrentClient = {
           signal: controller.signal,
         });
         clearTimeout(t);
-        return { ok: resAdd.ok, status: resAdd.status, error: resAdd.ok ? undefined : 'add_failed' };
+        if (resAdd.ok) return { ok: true, status: resAdd.status };
+        return { ok: false, status: resAdd.status, error: 'add_failed' };
       } catch (e) {
         clearTimeout(t);
         return { ok: false, error: (e as Error).message };
