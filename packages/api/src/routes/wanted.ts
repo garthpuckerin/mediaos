@@ -1,6 +1,7 @@
-import type { FastifyPluginAsync } from 'fastify';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+import type { FastifyPluginAsync } from 'fastify';
 
 type WantedItem = {
   id: string;

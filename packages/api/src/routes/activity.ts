@@ -1,8 +1,10 @@
-import type { FastifyPluginAsync } from 'fastify';
-import { loadGrabs } from '../services/grabStore';
-import { qbittorrent, sabnzbd } from '@mediaos/adapters/src/downloaders';
-import path from 'path';
 import { promises as fs } from 'fs';
+import path from 'path';
+
+import { qbittorrent, sabnzbd } from '@mediaos/adapters/src/downloaders';
+import type { FastifyPluginAsync } from 'fastify';
+
+import { loadGrabs } from '../services/grabStore';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
 const DL_FILE = path.join(CONFIG_DIR, 'downloaders.json');

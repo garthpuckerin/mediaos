@@ -1,10 +1,11 @@
-import { Database } from 'sqlite3';
 import { promisify } from 'util';
+
+import { Database } from 'sqlite3';
 
 export async function setupTestDatabase(): Promise<void> {
   const db = new Database(':memory:');
   const run = promisify(db.run.bind(db));
-  
+
   // Create test tables
   await run(`
     CREATE TABLE IF NOT EXISTS media_items (
@@ -17,7 +18,7 @@ export async function setupTestDatabase(): Promise<void> {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -29,7 +30,7 @@ export async function setupTestDatabase(): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  
+
   await run(`
     CREATE TABLE IF NOT EXISTS indexers (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +41,7 @@ export async function setupTestDatabase(): Promise<void> {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
-  
+
   // Store database instance for cleanup
   (global as any).testDatabase = db;
 }

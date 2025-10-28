@@ -1,7 +1,8 @@
-import type { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 
 type LibraryItem = {
   id: string;
@@ -78,7 +79,8 @@ const plugin: FastifyPluginAsync = async (app) => {
     const newId =
       providedId ||
       Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-    const { id: _ignore, ...rest } = data as any;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id: _, ...rest } = data as any;
     const item: LibraryItem = { id: newId, ...(rest as any) };
     items.push(item);
     await saveLibrary(items);

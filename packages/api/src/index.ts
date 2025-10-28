@@ -1,26 +1,27 @@
-import path from 'path';
 import { promises as fs } from 'fs';
+import path from 'path';
 
-import dotenv from 'dotenv';
-import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import multipart from '@fastify/multipart';
 import rateLimit from '@fastify/rate-limit';
 import sensible from '@fastify/sensible';
 import { sabnzbd } from '@mediaos/adapters/src/downloaders';
-import filesRoutes from './routes/files';
-import libraryRoutes from './routes/library';
-import indexersRoutes from './routes/indexers';
-import downloadsRoutes from './routes/downloads';
-import settingsRoutes from './routes/settings';
-import qualityRoutes from './routes/quality';
-import verifyRoutes from './routes/verify';
-import verifySettingsRoutes from './routes/verifySettings';
-import verifyJobsRoutes from './routes/verifyJobs';
-import calendarRoutes from './routes/calendar';
-import wantedRoutes from './routes/wanted';
+import dotenv from 'dotenv';
+import Fastify from 'fastify';
+
 import activityRoutes from './routes/activity';
+import calendarRoutes from './routes/calendar';
+import downloadsRoutes from './routes/downloads';
+import filesRoutes from './routes/files';
+import indexersRoutes from './routes/indexers';
+import libraryRoutes from './routes/library';
+import qualityRoutes from './routes/quality';
+import settingsRoutes from './routes/settings';
+import verifyRoutes from './routes/verify';
+import verifyJobsRoutes from './routes/verifyJobs';
+import verifySettingsRoutes from './routes/verifySettings';
+import wantedRoutes from './routes/wanted';
 
 // Load environment variables
 dotenv.config();

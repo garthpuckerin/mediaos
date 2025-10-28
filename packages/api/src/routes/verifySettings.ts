@@ -1,6 +1,7 @@
-import type { FastifyPluginAsync } from 'fastify';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+import type { FastifyPluginAsync } from 'fastify';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
 const VERIFY_SETTINGS = path.join(CONFIG_DIR, 'verify.json');
@@ -33,10 +34,13 @@ const plugin: FastifyPluginAsync = async (app) => {
     const b = (req.body || {}) as any;
     const settings = b && typeof b === 'object' ? b : {};
     await ensureDir(VERIFY_SETTINGS);
-    await fs.writeFile(VERIFY_SETTINGS, JSON.stringify(settings, null, 2), 'utf8');
+    await fs.writeFile(
+      VERIFY_SETTINGS,
+      JSON.stringify(settings, null, 2),
+      'utf8'
+    );
     return { ok: true, settings };
   });
 };
 
 export default plugin;
-

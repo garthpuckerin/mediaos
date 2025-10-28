@@ -643,9 +643,16 @@ export default function App() {
         {toasts.map((t) => (
           <div
             key={t.id}
+            role="button"
+            tabIndex={0}
             onClick={() =>
               setToasts((prev) => prev.filter((x) => x.id !== t.id))
             }
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setToasts((prev) => prev.filter((x) => x.id !== t.id));
+              }
+            }}
             style={{
               minWidth: 240,
               maxWidth: 360,
@@ -1589,8 +1596,8 @@ function ActivityQueue() {
       clearInterval(id);
     };
   }, []);
-  const toPlural = (k: string) =>
-    k === 'movie' ? 'movies' : k === 'book' ? 'books' : k;
+  // const toPlural = (k: string) =>
+  //   k === 'movie' ? 'movies' : k === 'book' ? 'books' : k;
   return (
     <section>
       <h2>Activity - Queue</h2>
@@ -1977,11 +1984,13 @@ function LibraryList({
   const [statusMap, setStatusMap] = React.useState<
     Record<string, { lastGrab?: any; lastVerify?: any }>
   >({});
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editTitle, setEditTitle] = React.useState<string>('');
   const [editKind, setEditKind] = React.useState<
     'movie' | 'series' | 'book' | 'music'
   >('series');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [savingEdit, setSavingEdit] = React.useState(false);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
@@ -2185,6 +2194,7 @@ function LibraryList({
     setEditKind('series');
     setSavingEdit(false);
   };
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const onEditSave = async (it: any) => {
     try {
       setSavingEdit(true);
@@ -2503,12 +2513,12 @@ function LibraryItemDetail({
   const [results, setResults] = React.useState<any[]>([]);
   const [searching, setSearching] = React.useState(false);
   const [serverFilter, setServerFilter] = React.useState(false);
-  const [protoFilter, setProtoFilter] = React.useState<
-    'any' | 'torrent' | 'usenet'
-  >('any');
-  const [minSeeders, setMinSeeders] = React.useState<string>('');
-  const [minSize, setMinSize] = React.useState<string>('');
-  const [maxSize, setMaxSize] = React.useState<string>('');
+  // const [protoFilter, setProtoFilter] = React.useState<
+  //   'any' | 'torrent' | 'usenet'
+  // >('any');
+  // const [minSeeders, setMinSeeders] = React.useState<string>('');
+  // const [minSize, setMinSize] = React.useState<string>('');
+  // const [maxSize, setMaxSize] = React.useState<string>('');
   const [lastVerify, setLastVerify] = React.useState<any | null>(null);
   const [verifyJob, setVerifyJob] = React.useState<{
     id: string;

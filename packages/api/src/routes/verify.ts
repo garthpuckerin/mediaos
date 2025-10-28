@@ -1,7 +1,12 @@
-import type { FastifyPluginAsync } from 'fastify';
-import { runVerify } from '../services/verify';
-import { loadVerifyResults, saveLastVerifyResult, loadVerifySettings } from '../services/verifyStore';
 import { probeMedia, probeMediaStub } from '@mediaos/workers';
+import type { FastifyPluginAsync } from 'fastify';
+
+import { runVerify } from '../services/verify';
+import {
+  loadVerifyResults,
+  saveLastVerifyResult,
+  loadVerifySettings,
+} from '../services/verifyStore';
 
 // settings are loaded via services/verifyStore
 
@@ -29,7 +34,16 @@ const plugin: FastifyPluginAsync = async (app) => {
     const key = `${kind}:${id}`;
     await saveLastVerifyResult(key, { ...result, kind, id, title });
 
-    app.log.info({ kind, id, phase, issues: result.issues, topSeverity: result.topSeverity }, 'VERIFY_RESULT');
+    app.log.info(
+      {
+        kind,
+        id,
+        phase,
+        issues: result.issues,
+        topSeverity: result.topSeverity,
+      },
+      'VERIFY_RESULT'
+    );
     return { ok: true, result };
   });
 

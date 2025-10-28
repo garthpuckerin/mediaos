@@ -1,7 +1,11 @@
-import type { FastifyPluginAsync } from 'fastify';
-import { runVerify } from '../services/verify';
-import { saveLastVerifyResult, loadVerifySettings } from '../services/verifyStore';
 import { probeMedia } from '@mediaos/workers';
+import type { FastifyPluginAsync } from 'fastify';
+
+import { runVerify } from '../services/verify';
+import {
+  saveLastVerifyResult,
+  loadVerifySettings,
+} from '../services/verifyStore';
 
 type Job = {
   id: string;
@@ -43,7 +47,12 @@ const plugin: FastifyPluginAsync = async (app) => {
       if (!j) return;
       j.status = 'running';
       try {
-        const md = await probeMedia({ kind: j.input.kind, id: j.input.id, title: j.input.title, path: j.input.path });
+        const md = await probeMedia({
+          kind: j.input.kind,
+          id: j.input.id,
+          title: j.input.title,
+          path: j.input.path,
+        });
         const settings = await loadVerifySettings();
         const result = runVerify({ ...j.input, settings }, md as any);
         j.result = result;

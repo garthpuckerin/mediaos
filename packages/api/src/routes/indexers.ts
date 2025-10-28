@@ -1,7 +1,8 @@
-import type { FastifyPluginAsync } from 'fastify';
-import { z } from 'zod';
 import { promises as fs } from 'fs';
 import path from 'path';
+
+import type { FastifyPluginAsync } from 'fastify';
+import { z } from 'zod';
 
 type Indexer = {
   id: string;

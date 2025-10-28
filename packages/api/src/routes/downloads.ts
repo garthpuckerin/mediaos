@@ -1,12 +1,14 @@
-import type { FastifyPluginAsync } from 'fastify';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+import type { MultipartFile } from '@fastify/multipart';
 import {
   qbittorrent,
   sabnzbd,
   nzbget,
 } from '@mediaos/adapters/src/downloaders';
-import { promises as fs } from 'fs';
-import path from 'path';
-import type { MultipartFile } from '@fastify/multipart';
+import type { FastifyPluginAsync } from 'fastify';
+
 import { loadGrabs, saveGrab } from '../services/grabStore';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
