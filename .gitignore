@@ -115,6 +115,7 @@ Thumbs.db
 
 # MediaOS specific
 /config/
+!config/README.md
 /downloads/
 /media/
 artifacts/
