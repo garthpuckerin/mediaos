@@ -5,7 +5,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    exclude: ['node_modules/**', 'test/e2e/**', '**/dist/**'],
+    exclude: [
+      'node_modules/**',
+      'test/e2e/**',
+      '**/dist/**',
+      'playwright-tests/**',
+      '**/node_modules/**'
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -35,8 +41,7 @@ export default defineConfig({
     },
     setupFiles: ['./test/setup.ts'],
     testTimeout: 10000,
-    hookTimeout: 10000,
-    exclude: ['playwright-tests/**', 'node_modules/**']
+    hookTimeout: 10000
   },
   resolve: {
     alias: {
