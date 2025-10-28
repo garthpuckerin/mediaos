@@ -61,6 +61,7 @@ type DownloaderSettingsResponse = {
     username: string;
     timeoutMs: number;
     hasPassword: boolean;
+    category?: string;
   };
   nzbget: {
     enabled: boolean;
@@ -74,6 +75,7 @@ type DownloaderSettingsResponse = {
     baseUrl: string;
     timeoutMs: number;
     hasApiKey: boolean;
+    category?: string;
   };
 };
 
@@ -118,6 +120,7 @@ export default function App() {
     null
   );
   const [savingSettings, setSavingSettings] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   useEffect(() => {
     fetch('/api/system/health')
@@ -132,6 +135,17 @@ export default function App() {
 
     const onHash = () => setRoute(parseHash());
     window.addEventListener('hashchange', onHash);
+    const onToast = (e: Event) => {
+      const ev = e as CustomEvent<ToastItem>;
+      const t = ev.detail;
+      if (!t) return;
+      setToasts((prev) => [...prev, t]);
+      const ttl = t.kind === 'error' ? 6000 : 3500;
+      setTimeout(() => {
+        setToasts((prev) => prev.filter((x) => x.id !== t.id));
+      }, ttl);
+    };
+    window.addEventListener('toast:push', onToast as any);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
 
@@ -241,6 +255,7 @@ export default function App() {
         <LibraryItemDetail
           kind={kind}
           id={route.id || ''}
+          settings={settings}
           onOpenArtwork={(t) => {
             setArtTitle(t);
             setArtOpen(true);
@@ -274,13 +289,13 @@ export default function App() {
 
   const renderActivity = () => {
     const page = route.page || 'queue';
-    if (page === 'wanted') {
-      return <WantedPage />;
-    }
+    if (page === 'wanted') return <WantedPage />;
+    if (page === 'queue') return <ActivityQueue />;
+    if (page === 'history') return <ActivityHistory />;
     return (
       <section>
         <h2>Activity - {page.charAt(0).toUpperCase() + page.slice(1)}</h2>
-        <p style={{ color: '#9aa4b2' }}>This is a placeholder for {page}.</p>
+        <p style={{ color: '#9aa4b2' }}>No content.</p>
       </section>
     );
   };
@@ -316,6 +331,7 @@ export default function App() {
                       username: s('qb.username') || undefined,
                       password: s('qb.password') || undefined,
                       timeoutMs: n('qb.timeoutMs'),
+                      category: s('qb.category') || undefined,
                     },
                     nzbget: {
                       enabled: b('nz.enabled'),
@@ -329,6 +345,7 @@ export default function App() {
                       baseUrl: s('sab.baseUrl') || undefined,
                       apiKey: s('sab.apiKey') || undefined,
                       timeoutMs: n('sab.timeoutMs'),
+                      category: s('sab.category') || undefined,
                     },
                   } as any;
                   const res = await fetch('/api/settings/downloaders', {
@@ -339,9 +356,9 @@ export default function App() {
                   if (!res.ok) throw new Error(await res.text());
                   const json = await res.json();
                   setSettings(json.downloaders as DownloaderSettingsResponse);
-                  alert('Saved');
+                  pushToast('success', 'Settings saved');
                 } catch (err) {
-                  alert((err as Error).message);
+                  pushToast('error', (err as Error).message || 'Save failed');
                 } finally {
                   setSavingSettings(false);
                 }
@@ -373,6 +390,7 @@ export default function App() {
                           username: str('qb.username') || undefined,
                           password: str('qb.password') || undefined,
                           timeoutMs: num('qb.timeoutMs'),
+                          category: str('qb.category') || undefined,
                         }
                       : key === 'nzbget'
                         ? {
@@ -387,6 +405,7 @@ export default function App() {
                             baseUrl: str('sab.baseUrl') || undefined,
                             apiKey: str('sab.apiKey') || undefined,
                             timeoutMs: num('sab.timeoutMs'),
+                            category: str('sab.category') || undefined,
                           };
                   try {
                     const r = await fetch('/api/settings/downloaders/test', {
@@ -396,13 +415,17 @@ export default function App() {
                     });
                     const j = await r.json();
                     if (j.ok)
-                      alert(
+                      pushToast(
+                        'success',
                         `${label} reachable${j.status ? ` (status ${j.status})` : ''}`
                       );
                     else
-                      alert(`${label} failed: ${j.error || 'unknown error'}`);
+                      pushToast(
+                        'error',
+                        `${label} failed: ${j.error || 'unknown error'}`
+                      );
                   } catch (err) {
-                    alert((err as Error).message);
+                    pushToast('error', (err as Error).message || 'Test failed');
                   }
                 };
                 return (
@@ -473,6 +496,19 @@ export default function App() {
                           />
                         </label>
                       )}
+                      {key === 'qbittorrent' && (
+                        <label>
+                          <div style={{ fontSize: 12, color: '#9aa4b2' }}>
+                            Category
+                          </div>
+                          <input
+                            name="qb.category"
+                            placeholder="tv"
+                            defaultValue={s.category || ''}
+                            style={inputStyle}
+                          />
+                        </label>
+                      )}
                       {key === 'nzbget' && (
                         <label>
                           <div style={{ fontSize: 12, color: '#9aa4b2' }}>
@@ -495,6 +531,19 @@ export default function App() {
                             name="sab.apiKey"
                             type="password"
                             placeholder={s.hasApiKey ? '******' : ''}
+                            style={inputStyle}
+                          />
+                        </label>
+                      )}
+                      {key === 'sabnzbd' && (
+                        <label>
+                          <div style={{ fontSize: 12, color: '#9aa4b2' }}>
+                            Category
+                          </div>
+                          <input
+                            name="sab.category"
+                            placeholder="tv"
+                            defaultValue={s.category || ''}
                             style={inputStyle}
                           />
                         </label>
@@ -579,6 +628,79 @@ export default function App() {
         overflow: 'hidden',
       }}
     >
+      {/* Toasts */}
+      <div
+        aria-live="polite"
+        style={{
+          position: 'fixed',
+          top: 10,
+          right: 10,
+          display: 'grid',
+          gap: 8,
+          zIndex: 50,
+        }}
+      >
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            onClick={() =>
+              setToasts((prev) => prev.filter((x) => x.id !== t.id))
+            }
+            style={{
+              minWidth: 240,
+              maxWidth: 360,
+              borderRadius: 8,
+              border: '1px solid #1f2937',
+              padding: '8px 10px',
+              cursor: 'pointer',
+              background:
+                t.kind === 'success'
+                  ? '#064e3b'
+                  : t.kind === 'error'
+                    ? '#7f1d1d'
+                    : '#111827',
+              color: '#e5e7eb',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            }}
+          >
+            {t.title && (
+              <div style={{ fontWeight: 600, marginBottom: 2 }}>{t.title}</div>
+            )}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <div style={{ fontSize: 13, color: '#e5e7eb' }}>{t.message}</div>
+              {t.actionLabel && t.onAction && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    try {
+                      t.onAction && t.onAction();
+                    } finally {
+                      setToasts((prev) => prev.filter((x) => x.id !== t.id));
+                    }
+                  }}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    border: '1px solid #334155',
+                    background: '#0b1220',
+                    color: '#e5e7eb',
+                    fontSize: 12,
+                  }}
+                >
+                  {t.actionLabel}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
       <div
         style={{
           height: 48,
@@ -811,7 +933,7 @@ function IndexersSettings() {
               f.reset();
               await load();
             } catch (e) {
-              alert((e as Error).message);
+              pushToast('error', (e as Error).message || 'Failed');
             }
           }}
           style={{
@@ -922,7 +1044,9 @@ function QualitySettings() {
               const payload: any = { profiles: {} };
               for (const k of kinds) {
                 const allowed = String(data.get(`q.${k.key}.allowed`) || '');
-                const cutoff = String(data.get(`q.${k.key}.cutoff`) || '').trim();
+                const cutoff = String(
+                  data.get(`q.${k.key}.cutoff`) || ''
+                ).trim();
                 if (allowed || cutoff) {
                   payload.profiles[k.key] = {
                     allowed: toArray(allowed),
@@ -938,9 +1062,9 @@ function QualitySettings() {
               if (!res.ok) throw new Error(await res.text());
               const j = await res.json();
               setProfiles(j.profiles || {});
-              alert('Saved');
+              pushToast('success', 'Saved');
             } catch (err) {
-              alert((err as Error).message);
+              pushToast('error', (err as Error).message || 'Save failed');
             } finally {
               setSaving(false);
             }
@@ -954,7 +1078,9 @@ function QualitySettings() {
                 <legend style={{ padding: '0 6px' }}>{k.label}</legend>
                 <div style={{ display: 'grid', gap: 8 }}>
                   <label>
-                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Allowed (comma-separated)</div>
+                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>
+                      Allowed (comma-separated)
+                    </div>
                     <input
                       name={`q.${k.key}.allowed`}
                       defaultValue={(p.allowed || []).join(', ')}
@@ -1039,9 +1165,9 @@ function VerifySettings() {
               if (!res.ok) throw new Error(await res.text());
               const j = await res.json();
               setSettings(j.settings || {});
-              alert('Saved');
+              pushToast('success', 'Saved');
             } catch (err) {
-              alert((err as Error).message);
+              pushToast('error', (err as Error).message || 'Save failed');
             } finally {
               setSaving(false);
             }
@@ -1051,7 +1177,9 @@ function VerifySettings() {
           <fieldset style={fieldsetStyle}>
             <legend style={{ padding: '0 6px' }}>Basics</legend>
             <label>
-              <div style={{ fontSize: 12, color: '#9aa4b2' }}>Min Duration (sec)</div>
+              <div style={{ fontSize: 12, color: '#9aa4b2' }}>
+                Min Duration (sec)
+              </div>
               <input
                 name="minDurationSec"
                 type="number"
@@ -1061,7 +1189,9 @@ function VerifySettings() {
               />
             </label>
             <label>
-              <div style={{ fontSize: 12, color: '#9aa4b2' }}>Allowed Containers (comma-separated)</div>
+              <div style={{ fontSize: 12, color: '#9aa4b2' }}>
+                Allowed Containers (comma-separated)
+              </div>
               <input
                 name="allowedContainers"
                 defaultValue={(current.allowedContainers || []).join(', ')}
@@ -1072,23 +1202,51 @@ function VerifySettings() {
           </fieldset>
 
           <fieldset style={fieldsetStyle}>
-            <legend style={{ padding: '0 6px' }}>Min Bitrate (kbps) by Height</legend>
-            <div style={{ display: 'grid', gap: 8, gridTemplateColumns: '1fr 1fr' }}>
+            <legend style={{ padding: '0 6px' }}>
+              Min Bitrate (kbps) by Height
+            </legend>
+            <div
+              style={{
+                display: 'grid',
+                gap: 8,
+                gridTemplateColumns: '1fr 1fr',
+              }}
+            >
               <label>
                 <div style={{ fontSize: 12, color: '#9aa4b2' }}>480p</div>
-                <input name="br480" type="number" defaultValue={bitrate['480']} style={inputStyle} />
+                <input
+                  name="br480"
+                  type="number"
+                  defaultValue={bitrate['480']}
+                  style={inputStyle}
+                />
               </label>
               <label>
                 <div style={{ fontSize: 12, color: '#9aa4b2' }}>720p</div>
-                <input name="br720" type="number" defaultValue={bitrate['720']} style={inputStyle} />
+                <input
+                  name="br720"
+                  type="number"
+                  defaultValue={bitrate['720']}
+                  style={inputStyle}
+                />
               </label>
               <label>
                 <div style={{ fontSize: 12, color: '#9aa4b2' }}>1080p</div>
-                <input name="br1080" type="number" defaultValue={bitrate['1080']} style={inputStyle} />
+                <input
+                  name="br1080"
+                  type="number"
+                  defaultValue={bitrate['1080']}
+                  style={inputStyle}
+                />
               </label>
               <label>
                 <div style={{ fontSize: 12, color: '#9aa4b2' }}>2160p</div>
-                <input name="br2160" type="number" defaultValue={bitrate['2160']} style={inputStyle} />
+                <input
+                  name="br2160"
+                  type="number"
+                  defaultValue={bitrate['2160']}
+                  style={inputStyle}
+                />
               </label>
             </div>
           </fieldset>
@@ -1106,20 +1264,39 @@ function VerifySettings() {
 function WantedPage() {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
-  React.useEffect(() => {
+  const [error, setError] = React.useState<string | null>(null);
+  const [scanning, setScanning] = React.useState(false);
+  const [scanSummary, setScanSummary] = React.useState<{
+    scannedAt: string;
+    results: Array<{ key: string; found: number; grabbed: number }>;
+  } | null>(null);
+  const loadWanted = React.useCallback(async () => {
     setLoading(true);
-    fetch('/api/wanted')
-      .then((r) => r.json())
-      .then((j) => setItems(Array.isArray(j.items) ? j.items : []))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+    setError(null);
+    try {
+      const res = await fetch('/api/wanted');
+      const j = await res.json();
+      setItems(Array.isArray(j.items) ? j.items : []);
+    } catch (e) {
+      setItems([]);
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  React.useEffect(() => {
+    void loadWanted();
+  }, [loadWanted]);
 
   const removeItem = async (kind: string, id: string) => {
     try {
-      const res = await fetch(`/api/wanted/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
+      const res = await fetch(
+        `/api/wanted/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,
+        {
+          method: 'DELETE',
+        }
+      );
       const j = await res.json();
       if (j.ok) setItems(Array.isArray(j.items) ? j.items : []);
     } catch (_e) {
@@ -1127,10 +1304,88 @@ function WantedPage() {
     }
   };
 
+  const handleScan = async (enqueue = false) => {
+    setScanning(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/wanted/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(enqueue ? { enqueue: true } : {}),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'scan_failed');
+      setScanSummary({
+        scannedAt: j.scannedAt || new Date().toISOString(),
+        results: Array.isArray(j.results)
+          ? j.results.map((r: any) => ({
+              key: String(r.key || ''),
+              found: Number(r.found || 0),
+              grabbed: Number(r.grabbed || 0),
+            }))
+          : [],
+      });
+      await loadWanted();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setScanning(false);
+    }
+  };
+
   return (
     <section>
       <h2>Activity - Wanted</h2>
-      {loading && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
+      {error && <p style={{ color: '#f87171' }}>{error}</p>}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <button
+          style={buttonStyle}
+          disabled={scanning}
+          onClick={() => handleScan(false)}
+        >
+          {scanning ? 'Scanning...' : 'Scan Wanted'}
+        </button>
+        <button
+          style={buttonStyle}
+          disabled={scanning}
+          onClick={() => handleScan(true)}
+        >
+          {scanning ? 'Scanning...' : 'Scan & Queue'}
+        </button>
+      </div>
+      {scanSummary && (
+        <div
+          style={{
+            border: '1px solid #1f2937',
+            borderRadius: 8,
+            padding: 8,
+            marginBottom: 12,
+            background: '#0b1220',
+          }}
+        >
+          <div style={{ color: '#9aa4b2', fontSize: 12 }}>
+            Last scan: {new Date(scanSummary.scannedAt).toLocaleString()}
+          </div>
+          {scanSummary.results.length === 0 && (
+            <div style={{ color: '#9aa4b2' }}>Nothing found.</div>
+          )}
+          {scanSummary.results.length > 0 && (
+            <ul
+              style={{ margin: 0, padding: '8px 0 0 18px', color: '#e5e7eb' }}
+            >
+              {scanSummary.results.map((row) => (
+                <li key={row.key} style={{ marginBottom: 4 }}>
+                  <strong>{row.key}</strong>{' '}
+                  <span style={{ color: '#9aa4b2' }}>
+                    Found {row.found} - Queued {row.grabbed}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+      {loading && <p style={{ color: '#9aa4b2' }}>Loading.</p>}
       {!loading && items.length === 0 && (
         <p style={{ color: '#9aa4b2' }}>Nothing in Wanted.</p>
       )}
@@ -1139,12 +1394,32 @@ function WantedPage() {
           {items.map((it) => (
             <div
               key={`${it.kind}:${it.id}`}
-              style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8 }}
+              style={{
+                border: '1px solid #1f2937',
+                borderRadius: 8,
+                padding: 8,
+              }}
             >
               <div style={{ color: '#9aa4b2', fontSize: 12 }}>{it.kind}</div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <div>{it.title}</div>
-                <button style={buttonStyle} onClick={() => removeItem(it.kind, it.id)}>Remove</button>
+                <button
+                  style={buttonStyle}
+                  onClick={() => removeItem(it.kind, it.id)}
+                >
+                  Remove
+                </button>
+              </div>
+              <div style={{ marginTop: 6, color: '#9aa4b2', fontSize: 12 }}>
+                {it.lastScan
+                  ? `Last scan ${new Date(it.lastScan.at).toLocaleString()} - Found ${it.lastScan.found} - Queued ${it.lastScan.grabbed}`
+                  : 'Not scanned yet'}
               </div>
             </div>
           ))}
@@ -1153,34 +1428,532 @@ function WantedPage() {
     </section>
   );
 }
-
 function CalendarPage() {
   const [events, setEvents] = React.useState<any[]>([]);
   const [loadingCal, setLoadingCal] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
-    setLoadingCal(true);
-    fetch('/api/calendar')
-      .then((r) => r.json())
-      .then((j) => setEvents(Array.isArray(j.events) ? j.events : []))
-      .catch(() => setEvents([]))
-      .finally(() => setLoadingCal(false));
+    let cancelled = false;
+    const run = async () => {
+      setLoadingCal(true);
+      setError(null);
+      try {
+        const res = await fetch('/api/calendar');
+        const j = await res.json();
+        if (!cancelled) setEvents(Array.isArray(j.events) ? j.events : []);
+      } catch (e) {
+        if (!cancelled) {
+          setError((e as Error).message);
+          setEvents([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingCal(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const upcomingSoon = React.useMemo(
+    () =>
+      events.filter(
+        (ev: any) => typeof ev?.daysUntil === 'number' && ev.daysUntil <= 3
+      ),
+    [events]
+  );
+
+  const formatDay = (value?: string) => {
+    if (!value) return '-';
+    const dt = new Date(value);
+    if (Number.isNaN(dt.getTime())) return value;
+    return dt.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
     <section>
       <h2>Calendar</h2>
-      {loadingCal && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
+      {error && <p style={{ color: '#f87171' }}>{error}</p>}
+      {upcomingSoon.length > 0 && (
+        <div
+          style={{
+            border: '1px solid #1f2937',
+            borderRadius: 8,
+            padding: 8,
+            marginBottom: 12,
+            background: '#0b1220',
+          }}
+        >
+          <div style={{ color: '#9aa4b2', fontSize: 12 }}>Coming up soon</div>
+          <ul style={{ margin: 0, padding: '6px 0 0 18px' }}>
+            {upcomingSoon.map((ev) => (
+              <li
+                key={ev.key || ev.day || ev.title}
+                style={{ color: '#e5e7eb', marginBottom: 4 }}
+              >
+                {ev.title}{' '}
+                <span style={{ color: '#9aa4b2' }}>
+                  in {ev.daysUntil} day{ev.daysUntil === 1 ? '' : 's'} (
+                  {formatDay(ev.day || ev.date)})
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {loadingCal && <p style={{ color: '#9aa4b2' }}>Loading.</p>}
       {!loadingCal && events.length === 0 && (
         <p style={{ color: '#9aa4b2' }}>No upcoming episodes.</p>
       )}
       {!loadingCal && events.length > 0 && (
         <div style={{ display: 'grid', gap: 8 }}>
-          {events.map((ev, i) => (
+          {events.map((ev) => {
+            const highlight =
+              typeof ev?.daysUntil === 'number' && ev.daysUntil <= 3;
+            return (
+              <div
+                key={ev.key || `${ev.day}-${ev.title}`}
+                style={{
+                  border: '1px solid #1f2937',
+                  borderRadius: 8,
+                  padding: 10,
+                  background: highlight ? '#132952' : '#0b1220',
+                  boxShadow: highlight
+                    ? '0 0 0 1px rgba(59,130,246,0.4)'
+                    : 'none',
+                }}
+              >
+                <div style={{ color: '#9aa4b2', fontSize: 12 }}>
+                  {formatDay(ev.day || ev.date)}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600 }}>
+                  <a
+                    href={`#/library/${String(ev.kind || 'series') === 'movie' ? 'movies' : String(ev.kind || 'series') === 'book' ? 'books' : String(ev.kind || 'series')}/item/${encodeURIComponent(ev.itemId || '')}`}
+                    style={{ color: '#e5e7eb', textDecoration: 'none' }}
+                  >
+                    {ev.title}
+                  </a>
+                </div>
+                <div style={{ color: '#9aa4b2', fontSize: 12, marginTop: 4 }}>
+                  {ev.kind ? ev.kind.toUpperCase() : 'item'} - in {ev.daysUntil}{' '}
+                  day{ev.daysUntil === 1 ? '' : 's'}
+                </div>
+                {ev.lastScan && (
+                  <div style={{ color: '#9aa4b2', fontSize: 12, marginTop: 4 }}>
+                    Last scan {new Date(ev.lastScan.at).toLocaleString()} -
+                    Found {ev.lastScan.found}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActivityQueue() {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const r = await fetch('/api/activity/live');
+        let j = await r.json();
+        if (!j?.ok) {
+          const r2 = await fetch('/api/activity/queue');
+          j = await r2.json();
+        }
+        if (!cancelled) setItems(Array.isArray(j.items) ? j.items : []);
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    const id = setInterval(() => void run(), 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+  const toPlural = (k: string) =>
+    k === 'movie' ? 'movies' : k === 'book' ? 'books' : k;
+  return (
+    <section>
+      <h2>Activity - Queue</h2>
+      {error && <p style={{ color: '#f87171' }}>{error}</p>}
+      {loading && <p style={{ color: '#9aa4b2' }}>Loading.</p>}
+      {!loading && items.length === 0 && (
+        <p style={{ color: '#9aa4b2' }}>Queue is empty.</p>
+      )}
+      {!loading && items.length > 0 && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {items.map((it: any, i: number) => {
+            const progress =
+              typeof it.progress === 'number'
+                ? Math.max(0, Math.min(1, it.progress))
+                : undefined;
+            const speed =
+              typeof it.speedBps === 'number'
+                ? `${(it.speedBps / 1024).toFixed(0)} KB/s`
+                : '';
+            const eta =
+              typeof it.etaSec === 'number' && it.etaSec > 0
+                ? `${Math.floor(it.etaSec / 60)}m`
+                : it.eta || '';
+            return (
+              <div
+                key={i}
+                style={{
+                  border: '1px solid #1f2937',
+                  borderRadius: 8,
+                  padding: 8,
+                }}
+              >
+                <div style={{ color: '#9aa4b2', fontSize: 12 }}>
+                  {it.client || 'client'} • {it.protocol || '-'}{' '}
+                  {it.category ? `• ${it.category}` : ''}
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <div
+                    style={{
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {it.title}
+                  </div>
+                  <div
+                    style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+                  >
+                    {/* Verify (best-effort) */}
+                    <button
+                      style={buttonStyle}
+                      onClick={async () => {
+                        try {
+                          const libRes = await fetch('/api/library');
+                          const lib = await libRes.json();
+                          const items = Array.isArray(lib.items)
+                            ? lib.items
+                            : [];
+                          const sanitize = (s: string) =>
+                            String(s || '')
+                              .toLowerCase()
+                              .replace(/[^a-z0-9]+/g, ' ')
+                              .trim();
+                          const titleSan = sanitize(String(it.title || ''));
+                          const candidate = items.find((x: any) =>
+                            titleSan.includes(sanitize(String(x.title || '')))
+                          );
+                          if (!candidate)
+                            throw new Error('No matching library item');
+                          const r = await fetch('/api/verify/jobs', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              kind: candidate.kind,
+                              id: candidate.id,
+                              title: candidate.title,
+                              phase: 'all',
+                            }),
+                          });
+                          const j = await r.json();
+                          if (!j.ok)
+                            throw new Error(j.error || 'verify_failed');
+                          pushToast('success', 'Verify started');
+                        } catch (e) {
+                          pushToast(
+                            'error',
+                            (e as Error).message || 'Verify failed'
+                          );
+                        }
+                      }}
+                    >
+                      Verify
+                    </button>
+                    {/* Open in SAB */}
+                    {String(it.client || '') === 'sabnzbd' && it.clientUrl && (
+                      <button
+                        style={buttonStyle}
+                        onClick={() => {
+                          try {
+                            window.open(String(it.clientUrl), '_blank');
+                          } catch (_) {
+                            /* ignore */
+                          }
+                        }}
+                      >
+                        Open
+                      </button>
+                    )}
+                    <button
+                      style={buttonStyle}
+                      onClick={async () => {
+                        try {
+                          const r = await fetch('/api/activity/action', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              client: it.client,
+                              op: 'pause',
+                              id: it.clientId,
+                            }),
+                          });
+                          const j = await r.json();
+                          if (!j.ok) throw new Error(j.error || 'pause_failed');
+                          pushToast('success', 'Paused');
+                        } catch (e) {
+                          pushToast(
+                            'error',
+                            (e as Error).message || 'Pause failed'
+                          );
+                        }
+                      }}
+                    >
+                      Pause
+                    </button>
+                    <button
+                      style={buttonStyle}
+                      onClick={async () => {
+                        try {
+                          const r = await fetch('/api/activity/action', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              client: it.client,
+                              op: 'resume',
+                              id: it.clientId,
+                            }),
+                          });
+                          const j = await r.json();
+                          if (!j.ok)
+                            throw new Error(j.error || 'resume_failed');
+                          pushToast('success', 'Resumed');
+                        } catch (e) {
+                          pushToast(
+                            'error',
+                            (e as Error).message || 'Resume failed'
+                          );
+                        }
+                      }}
+                    >
+                      Resume
+                    </button>
+                    <button
+                      style={{
+                        ...buttonStyle,
+                        borderColor: '#7f1d1d',
+                        color: '#f87171',
+                      }}
+                      onClick={async () => {
+                        if (!window.confirm('Remove from client queue?'))
+                          return;
+                        try {
+                          const r = await fetch('/api/activity/action', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              client: it.client,
+                              op: 'delete',
+                              id: it.clientId,
+                            }),
+                          });
+                          const j = await r.json();
+                          if (!j.ok)
+                            throw new Error(j.error || 'delete_failed');
+                          pushToast('success', 'Removed');
+                        } catch (e) {
+                          pushToast(
+                            'error',
+                            (e as Error).message || 'Remove failed'
+                          );
+                        }
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, color: '#9aa4b2', fontSize: 12 }}>
+                  <span>{it.status || ''}</span>
+                  {speed && <span> • {speed}</span>}
+                  {eta && <span> • ETA {eta}</span>}
+                </div>
+                {typeof progress === 'number' && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      height: 6,
+                      borderRadius: 999,
+                      background: '#111827',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${(progress * 100).toFixed(0)}%`,
+                        height: 6,
+                        borderRadius: 999,
+                        background: '#2563eb',
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActivityHistory() {
+  const [items, setItems] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const r = await fetch('/api/activity/history');
+        const j = await r.json();
+        if (!cancelled) setItems(Array.isArray(j.items) ? j.items : []);
+      } catch (e) {
+        if (!cancelled) setError((e as Error).message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void run();
+    const id = setInterval(() => void run(), 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, []);
+  const toPlural = (k: string) =>
+    k === 'movie' ? 'movies' : k === 'book' ? 'books' : k;
+  return (
+    <section>
+      <h2>Activity - History</h2>
+      {error && <p style={{ color: '#f87171' }}>{error}</p>}
+      {loading && <p style={{ color: '#9aa4b2' }}>Loading.</p>}
+      {!loading && items.length === 0 && (
+        <p style={{ color: '#9aa4b2' }}>History is empty.</p>
+      )}
+      {!loading && items.length > 0 && (
+        <div style={{ display: 'grid', gap: 8 }}>
+          {items.map((it, i) => (
             <div
               key={i}
-              style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8 }}
+              style={{
+                border: '1px solid #1f2937',
+                borderRadius: 8,
+                padding: 8,
+              }}
             >
-              <div style={{ color: '#9aa4b2', fontSize: 12 }}>{ev.date}</div>
-              <div>{ev.title}</div>
+              <div style={{ color: '#9aa4b2', fontSize: 12 }}>
+                {new Date(it.at || Date.now()).toLocaleString()} •{' '}
+                {it.kind || '-'} • {it.client || 'client'}
+              </div>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <div
+                  style={{
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {it.title}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    style={buttonStyle}
+                    onClick={async () => {
+                      try {
+                        const libRes = await fetch('/api/library');
+                        const lib = await libRes.json();
+                        const arr = Array.isArray(lib.items) ? lib.items : [];
+                        const sanitize = (s: string) =>
+                          String(s || '')
+                            .toLowerCase()
+                            .replace(/[^a-z0-9]+/g, ' ')
+                            .trim();
+                        const titleSan = sanitize(String(it.title || ''));
+                        const candidate = arr.find((x: any) =>
+                          titleSan.includes(sanitize(String(x.title || '')))
+                        );
+                        if (!candidate)
+                          throw new Error('No matching library item');
+                        const r = await fetch('/api/verify/jobs', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            kind: candidate.kind,
+                            id: candidate.id,
+                            title: candidate.title,
+                            phase: 'all',
+                          }),
+                        });
+                        const j = await r.json();
+                        if (!j.ok) throw new Error(j.error || 'verify_failed');
+                        pushToast('success', 'Verify started');
+                      } catch (e) {
+                        pushToast(
+                          'error',
+                          (e as Error).message || 'Verify failed'
+                        );
+                      }
+                    }}
+                  >
+                    Verify again
+                  </button>
+                  {it.id && it.kind && (
+                    <a
+                      href={`#/library/${toPlural(String(it.kind))}/item/${encodeURIComponent(it.id)}`}
+                      style={
+                        {
+                          ...buttonStyle,
+                          textDecoration: 'none',
+                          display: 'inline-block',
+                        } as any
+                      }
+                    >
+                      Open
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
@@ -1201,6 +1974,16 @@ function LibraryList({
   const [error, setError] = React.useState<string | null>(null);
   const gridRef = React.useRef<HTMLDivElement | null>(null);
   const [cols, setCols] = React.useState<number | null>(null);
+  const [statusMap, setStatusMap] = React.useState<
+    Record<string, { lastGrab?: any; lastVerify?: any }>
+  >({});
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [editTitle, setEditTitle] = React.useState<string>('');
+  const [editKind, setEditKind] = React.useState<
+    'movie' | 'series' | 'book' | 'music'
+  >('series');
+  const [savingEdit, setSavingEdit] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
 
   const toSingular = (k: KindKey) =>
     k === 'movies' ? 'movie' : k === 'books' ? 'book' : k;
@@ -1236,6 +2019,83 @@ function LibraryList({
     return () => {
       cancelled = true;
     };
+  }, [kind]);
+
+  React.useEffect(() => {
+    if (!items || items.length === 0) {
+      setStatusMap({});
+      return;
+    }
+    let cancelled = false;
+    const singular = toSingular(kind);
+    const run = async () => {
+      const updates: Record<string, { lastGrab?: any; lastVerify?: any }> = {};
+      await Promise.all(
+        items.map(async (it) => {
+          const key = it.id || it.title;
+          if (!key) return;
+          try {
+            const [lastGrab, lastVerify] = await Promise.all([
+              fetch(
+                `/api/downloads/last?kind=${encodeURIComponent(
+                  singular
+                )}&id=${encodeURIComponent(key)}`
+              )
+                .then((r) => r.json())
+                .catch(() => ({ last: null })),
+              fetch(
+                `/api/verify/last?kind=${encodeURIComponent(
+                  singular
+                )}&id=${encodeURIComponent(key)}`
+              )
+                .then((r) => r.json())
+                .catch(() => ({ result: null })),
+            ]);
+            updates[key] = {
+              lastGrab: lastGrab?.last || null,
+              lastVerify: lastVerify?.result || null,
+            };
+          } catch (_e) {
+            // ignore status fetch errors per item
+          }
+        })
+      );
+      if (!cancelled) setStatusMap(updates);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [items, kind]);
+
+  React.useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const detail = e.detail || {};
+        if (!detail || !detail.id) return;
+        if (detail.kind && toSingular(kind) !== detail.kind) return;
+        setStatusMap((prev) => {
+          const current = prev[detail.id] || {};
+          return {
+            ...prev,
+            [detail.id]: {
+              lastGrab:
+                detail.lastGrab !== undefined
+                  ? detail.lastGrab
+                  : current.lastGrab,
+              lastVerify:
+                detail.lastVerify !== undefined
+                  ? detail.lastVerify
+                  : current.lastVerify,
+            },
+          };
+        });
+      } catch (_e) {
+        // ignore
+      }
+    };
+    window.addEventListener('library:status', handler as any);
+    return () => window.removeEventListener('library:status', handler as any);
   }, [kind]);
 
   // Refresh list when artwork changes
@@ -1307,24 +2167,158 @@ function LibraryList({
     </div>
   );
 
+  const onEditStart = (it: any) => {
+    const id = it.id || it.title;
+    if (!id) return;
+    setEditingId(String(id));
+    setEditTitle(String(it.title || ''));
+    const k = String(it.kind || 'series');
+    setEditKind(
+      k === 'movie' || k === 'series' || k === 'book' || k === 'music'
+        ? (k as any)
+        : 'series'
+    );
+  };
+  const onEditCancel = () => {
+    setEditingId(null);
+    setEditTitle('');
+    setEditKind('series');
+    setSavingEdit(false);
+  };
+  const onEditSave = async (it: any) => {
+    try {
+      setSavingEdit(true);
+      const payload: any = {};
+      if (editTitle && editTitle.trim() !== String(it.title || ''))
+        payload.title = editTitle.trim();
+      if (editKind && editKind !== String(it.kind || ''))
+        payload.kind = editKind;
+      const id = it.id || it.title;
+      const res = await fetch(
+        `/api/library/${encodeURIComponent(String(id))}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }
+      );
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'update_failed');
+      setItems((prev) => {
+        const next = prev.map((x) =>
+          x.id === it.id ? { ...x, ...j.item } : x
+        );
+        const singular = toSingular(kind);
+        return next.filter((x) => x.kind === singular);
+      });
+      pushToast('success', 'Item updated');
+      onEditCancel();
+    } catch (e) {
+      pushToast('error', (e as Error).message || 'Update failed');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+  const onDelete = async (it: any) => {
+    try {
+      const id = it.id || it.title;
+      if (!id) return;
+      if (!window.confirm('Delete this item from Library?')) return;
+      setDeletingId(String(id));
+      const res = await fetch(
+        `/api/library/${encodeURIComponent(String(id))}`,
+        { method: 'DELETE' }
+      );
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'delete_failed');
+      setItems((prev) => prev.filter((x) => x.id !== it.id));
+      const removed = j.item;
+      pushToast('success', 'Item deleted', undefined, {
+        label: 'Undo',
+        run: async () => {
+          try {
+            const r = await fetch('/api/library', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: removed?.id,
+                kind: removed?.kind,
+                title: removed?.title,
+                posterUrl: removed?.posterUrl,
+                backgroundUrl: removed?.backgroundUrl,
+              }),
+            });
+            const jj = await r.json();
+            if (jj?.ok && jj.item) {
+              setItems((prev) => [jj.item, ...prev]);
+              pushToast('success', 'Item restored');
+            } else {
+              pushToast('error', 'Restore failed');
+            }
+          } catch (_e) {
+            pushToast('error', 'Restore failed');
+          }
+        },
+      });
+    } catch (e) {
+      pushToast('error', (e as Error).message || 'Delete failed');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const renderCard = (it: any) => {
     const poster = typeof it.posterUrl === 'string' ? it.posterUrl : null;
+    const itemKey = it.id || it.title || '';
+    const status = itemKey ? statusMap[itemKey] || {} : {};
+    const grabFailed = status.lastGrab && status.lastGrab.ok === false;
+    const verifySeverity = status.lastVerify?.topSeverity;
+    const verifyWarn = verifySeverity === 'warn' || verifySeverity === 'error';
     const detailHref = `#/library/${kind}/item/${encodeURIComponent(
       it.id || it.title || ''
     )}`;
     return (
-      <div key={it.id} style={{ position: 'relative' }}>
-        {/* Action icons overlay */}
+      <div key={it.id || it.title} style={{ position: 'relative' }}>
+        {/* Status badges & actions overlay */}
         <div
           style={{
             position: 'absolute',
             top: 8,
             right: 8,
-            display: 'flex',
+            display: 'grid',
             gap: 6,
+            justifyItems: 'end',
             zIndex: 2,
           }}
         >
+          {grabFailed && (
+            <span
+              style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 999,
+                fontSize: 11,
+                background: '#7f1d1d',
+                color: '#f87171',
+              }}
+            >
+              Grab Failed
+            </span>
+          )}
+          {verifyWarn && (
+            <span
+              style={{
+                display: 'inline-block',
+                padding: '2px 6px',
+                borderRadius: 999,
+                fontSize: 11,
+                background: verifySeverity === 'error' ? '#7f1d1d' : '#78350f',
+                color: '#fcd34d',
+              }}
+            >
+              Verify {String(verifySeverity || '').toUpperCase()}
+            </span>
+          )}
           <button
             type="button"
             title="Manage Artwork"
@@ -1344,7 +2338,50 @@ function LibraryList({
               cursor: 'pointer',
             }}
           >
-            🖼️
+            Art
+          </button>
+          <button
+            type="button"
+            title="Edit"
+            aria-label={`Edit ${it.title || 'item'}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEditStart(it);
+            }}
+            style={{
+              padding: '4px 6px',
+              borderRadius: 8,
+              border: '1px solid #1f2937',
+              background: '#0b1220',
+              color: '#e5e7eb',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Edit
+          </button>
+          <button
+            type="button"
+            title="Delete"
+            aria-label={`Delete ${it.title || 'item'}`}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              void onDelete(it);
+            }}
+            disabled={deletingId === String(it.id || it.title)}
+            style={{
+              padding: '4px 6px',
+              borderRadius: 8,
+              border: '1px solid #7f1d1d',
+              background: '#0b1220',
+              color: '#f87171',
+              fontSize: 12,
+              cursor: 'pointer',
+            }}
+          >
+            {deletingId === String(it.id || it.title) ? 'Del…' : 'Del'}
           </button>
         </div>
         {/* Card link */}
@@ -1382,14 +2419,38 @@ function LibraryList({
                     const img = e.currentTarget as HTMLImageElement;
                     img.style.display = 'none';
                     const parent = img.parentElement;
-                    if (parent) (parent as HTMLElement).style.background = '#111827';
+                    if (parent)
+                      (parent as HTMLElement).style.background = '#111827';
                   }}
                 />
               ) : (
                 <span style={{ color: '#9aa4b2' }}>No artwork</span>
               )}
             </div>
-            <div style={{ padding: 10 }}>{it.title || 'Untitled'}</div>
+            <div style={{ padding: 10 }}>
+              <div>{it.title || 'Untitled'}</div>
+              {(grabFailed || verifyWarn) && (
+                <div style={{ color: '#9aa4b2', fontSize: 12, marginTop: 6 }}>
+                  {grabFailed && (
+                    <span>
+                      Last grab failed
+                      {status.lastGrab?.at
+                        ? ` - ${new Date(status.lastGrab.at).toLocaleDateString()}`
+                        : ''}
+                    </span>
+                  )}
+                  {grabFailed && verifyWarn && <span> - </span>}
+                  {verifyWarn && (
+                    <span>
+                      Verify {String(verifySeverity || '').toUpperCase()}
+                      {status.lastVerify?.analyzedAt
+                        ? ` - ${new Date(status.lastVerify.analyzedAt).toLocaleDateString()}`
+                        : ''}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         </a>
       </div>
@@ -1427,10 +2488,12 @@ function LibraryList({
 function LibraryItemDetail({
   kind,
   id,
+  settings,
   onOpenArtwork,
 }: {
   kind: KindKey;
   id: string;
+  settings: any;
   onOpenArtwork: (title: string) => void;
 }) {
   const [item, setItem] = React.useState<any | null>(null);
@@ -1440,9 +2503,55 @@ function LibraryItemDetail({
   const [results, setResults] = React.useState<any[]>([]);
   const [searching, setSearching] = React.useState(false);
   const [serverFilter, setServerFilter] = React.useState(false);
+  const [protoFilter, setProtoFilter] = React.useState<
+    'any' | 'torrent' | 'usenet'
+  >('any');
+  const [minSeeders, setMinSeeders] = React.useState<string>('');
+  const [minSize, setMinSize] = React.useState<string>('');
+  const [maxSize, setMaxSize] = React.useState<string>('');
   const [lastVerify, setLastVerify] = React.useState<any | null>(null);
-  const [verifyJob, setVerifyJob] = React.useState<{ id: string; status: string } | null>(null);
+  const [verifyJob, setVerifyJob] = React.useState<{
+    id: string;
+    status: string;
+  } | null>(null);
   const [profiles, setProfiles] = React.useState<any | null>(null);
+  const [lastGrab, setLastGrab] = React.useState<any | null>(null);
+  const [nzbFile, setNzbFile] = React.useState<File | null>(null);
+  const [nzbUploading, setNzbUploading] = React.useState(false);
+  const [editMode, setEditMode] = React.useState(false);
+  const [newTitle, setNewTitle] = React.useState('');
+  const [newKind, setNewKind] = React.useState<
+    'movie' | 'series' | 'book' | 'music'
+  >('series');
+  const [savingEdit, setSavingEdit] = React.useState(false);
+  const [deleting, setDeleting] = React.useState(false);
+  const singularKind =
+    kind === 'movies' ? 'movie' : kind === 'books' ? 'book' : kind;
+  const refreshLastGrab = React.useCallback(() => {
+    fetch(
+      `/api/downloads/last?kind=${encodeURIComponent(
+        singularKind
+      )}&id=${encodeURIComponent(id)}`
+    )
+      .then((r) => r.json())
+      .then((j) => {
+        const next = j.last || null;
+        setLastGrab(next);
+        window.dispatchEvent(
+          new CustomEvent('library:status', {
+            detail: { kind: singularKind, id, lastGrab: next ?? null },
+          })
+        );
+      })
+      .catch(() => {
+        setLastGrab(null);
+        window.dispatchEvent(
+          new CustomEvent('library:status', {
+            detail: { kind: singularKind, id, lastGrab: null },
+          })
+        );
+      });
+  }, [singularKind, id]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -1454,7 +2563,16 @@ function LibraryItemDetail({
         if (!res.ok) throw new Error(await res.text());
         const json = await res.json();
         if (!json.ok) throw new Error(json.error || 'not_found');
-        if (!cancelled) setItem(json.item);
+        if (!cancelled) {
+          setItem(json.item);
+          setNewTitle(String(json.item?.title || ''));
+          const k = String(json.item?.kind || 'series');
+          setNewKind(
+            k === 'movie' || k === 'series' || k === 'book' || k === 'music'
+              ? (k as any)
+              : 'series'
+          );
+        }
       } catch (e) {
         if (!cancelled) setError((e as Error).message);
       } finally {
@@ -1475,14 +2593,139 @@ function LibraryItemDetail({
   }, []);
 
   React.useEffect(() => {
-    fetch(`/api/verify/last?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`)
+    fetch(
+      `/api/verify/last?kind=${encodeURIComponent(
+        singularKind
+      )}&id=${encodeURIComponent(id)}`
+    )
       .then((r) => r.json())
-      .then((j) => setLastVerify(j.result || null))
-      .catch(() => setLastVerify(null));
-  }, [kind, id]);
+      .then((j) => {
+        const next = j.result || null;
+        setLastVerify(next);
+        window.dispatchEvent(
+          new CustomEvent('library:status', {
+            detail: { kind: singularKind, id, lastVerify: next ?? null },
+          })
+        );
+      })
+      .catch(() => {
+        setLastVerify(null);
+        window.dispatchEvent(
+          new CustomEvent('library:status', {
+            detail: { kind: singularKind, id, lastVerify: null },
+          })
+        );
+      });
+    // Auto-refresh a few times to catch background verify completions
+    let cancelled = false;
+    let ticks = 0;
+    const maxTicks = 8;
+    const poll = async () => {
+      try {
+        const r = await fetch(
+          `/api/verify/last?kind=${encodeURIComponent(singularKind)}&id=${encodeURIComponent(id)}`
+        );
+        const j = await r.json();
+        if (!cancelled) setLastVerify(j.result || null);
+      } catch {
+        /* ignore */
+      }
+    };
+    const int = setInterval(async () => {
+      if (cancelled) return;
+      ticks++;
+      await poll();
+      if (ticks >= maxTicks) clearInterval(int);
+    }, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(int);
+    };
+  }, [singularKind, id]);
+
+  React.useEffect(() => {
+    refreshLastGrab();
+  }, [refreshLastGrab]);
 
   const title = item?.title || 'Item';
   const poster = item?.posterUrl || null;
+  const toPlural = (k: string) =>
+    k === 'movie' ? 'movies' : k === 'book' ? 'books' : k;
+  const onSaveEdit = async () => {
+    if (!item) return;
+    setSavingEdit(true);
+    try {
+      const payload: any = {};
+      if (newTitle && newTitle.trim() !== String(item.title || ''))
+        payload.title = newTitle.trim();
+      if (newKind && newKind !== String(item.kind || ''))
+        payload.kind = newKind;
+      if (Object.keys(payload).length === 0) {
+        setEditMode(false);
+        return;
+      }
+      const res = await fetch(`/api/library/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'update_failed');
+      setItem(j.item);
+      setEditMode(false);
+      pushToast('success', 'Item updated');
+      if (payload.kind && toPlural(payload.kind) !== kind) {
+        // Navigate to new kind path with same id
+        window.location.hash = `#/library/${toPlural(payload.kind)}/item/${encodeURIComponent(id)}`;
+      }
+    } catch (e) {
+      pushToast('error', (e as Error).message || 'Update failed');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+  const onDelete = async () => {
+    if (!item || deleting) return;
+    // simple confirm for destructive action
+    if (!window.confirm('Delete this item? This removes it from Library.'))
+      return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/library/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+      });
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || 'delete_failed');
+      const removed = j.item;
+      pushToast('success', 'Item deleted', undefined, {
+        label: 'Undo',
+        run: async () => {
+          try {
+            await fetch('/api/library', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: removed?.id,
+                kind: removed?.kind,
+                title: removed?.title,
+                posterUrl: removed?.posterUrl,
+                backgroundUrl: removed?.backgroundUrl,
+              }),
+            });
+            pushToast('success', 'Item restored');
+          } catch (_e) {
+            pushToast('error', 'Restore failed');
+          }
+        },
+      });
+      // Navigate back to the list for current kind
+      window.location.hash = `#/library/${kind}/list`;
+    } catch (e) {
+      pushToast('error', (e as Error).message || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const qualityRank: Record<string, number> = {
     '2160p': 4,
@@ -1503,6 +2746,32 @@ function LibraryItemDetail({
       }
     }
     return best;
+  };
+
+  const handleRegrab = async () => {
+    if (!lastGrab || !lastGrab.link) return;
+    try {
+      const res = await fetch('/api/downloads/grab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind,
+          id,
+          title: lastGrab.title || title,
+          link: lastGrab.link,
+          protocol: lastGrab.protocol || 'torrent',
+        }),
+      });
+      const j = await res.json();
+      if (j.ok) {
+        pushToast('success', 'Re-grab queued');
+        refreshLastGrab();
+      } else {
+        pushToast('error', 'Re-grab failed: ' + (j.error || 'unknown'));
+      }
+    } catch (e) {
+      pushToast('error', (e as Error).message || 'Re-grab failed');
+    }
   };
 
   return (
@@ -1542,7 +2811,7 @@ function LibraryItemDetail({
               </button>
               <button
                 style={buttonStyle}
-                onClick={() => alert('Manual Search coming soon')}
+                onClick={() => pushToast('info', 'Manual search coming soon')}
               >
                 Manual Search
               </button>
@@ -1560,12 +2829,18 @@ function LibraryItemDetail({
                       const count = Array.isArray(j.result?.issues)
                         ? j.result.issues.length
                         : 0;
-                      alert(`Verification complete: ${count} issues`);
+                      pushToast(
+                        'success',
+                        `Verification complete: ${count} issues`
+                      );
                     } else {
-                      alert('Verification failed');
+                      pushToast('error', 'Verification failed');
                     }
                   } catch (e) {
-                    alert((e as Error).message);
+                    pushToast(
+                      'error',
+                      (e as Error).message || 'Verification failed'
+                    );
                   }
                 }}
               >
@@ -1573,10 +2848,14 @@ function LibraryItemDetail({
               </button>
               <button
                 style={buttonStyle}
-                disabled={!!verifyJob && verifyJob.status !== 'completed' && verifyJob.status !== 'failed'}
+                disabled={
+                  !!verifyJob &&
+                  verifyJob.status !== 'completed' &&
+                  verifyJob.status !== 'failed'
+                }
                 onClick={async () => {
                   try {
-                    setVerifyJob({ id: '', status: 'queued' });
+                    setVerifyJob({ id, status: 'queued' });
                     const res = await fetch('/api/verify/jobs', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
@@ -1589,15 +2868,32 @@ function LibraryItemDetail({
                     const start = Date.now();
                     const poll = async () => {
                       try {
-                        const r2 = await fetch(`/api/verify/jobs/${encodeURIComponent(jobId)}`);
+                        const r2 = await fetch(
+                          `/api/verify/jobs/${encodeURIComponent(jobId)}`
+                        );
                         const j2 = await r2.json();
                         if (j2.ok && j2.job) {
                           setVerifyJob({ id: jobId, status: j2.job.status });
-                          if (j2.job.status === 'completed' || j2.job.status === 'failed') {
+                          if (
+                            j2.job.status === 'completed' ||
+                            j2.job.status === 'failed'
+                          ) {
                             // refresh last verify panel
-                            const r3 = await fetch(`/api/verify/last?kind=${encodeURIComponent(kind)}&id=${encodeURIComponent(id)}`);
+                            const r3 = await fetch(
+                              `/api/verify/last?kind=${encodeURIComponent(singularKind)}&id=${encodeURIComponent(id)}`
+                            );
                             const j3 = await r3.json();
-                            setLastVerify(j3.result || null);
+                            const nextVerify = j3.result || null;
+                            setLastVerify(nextVerify);
+                            window.dispatchEvent(
+                              new CustomEvent('library:status', {
+                                detail: {
+                                  kind: singularKind,
+                                  id,
+                                  lastVerify: nextVerify ?? null,
+                                },
+                              })
+                            );
                             return;
                           }
                         }
@@ -1605,15 +2901,22 @@ function LibraryItemDetail({
                         void 0;
                       }
                       if (Date.now() - start < 15000) setTimeout(poll, 1000);
-                      else setVerifyJob((v) => (v ? { ...v, status: 'failed' } : v));
+                      else
+                        setVerifyJob((v) =>
+                          v ? { ...v, status: 'failed' } : v
+                        );
                     };
                     setTimeout(poll, 500);
                   } catch (e) {
-                    alert((e as Error).message);
+                    pushToast('error', (e as Error).message || 'Failed');
                   }
                 }}
               >
-                {verifyJob && verifyJob.status !== 'completed' && verifyJob.status !== 'failed' ? 'Verifying…' : 'Verify (Async)'}
+                {verifyJob &&
+                verifyJob.status !== 'completed' &&
+                verifyJob.status !== 'failed'
+                  ? 'Verifying...'
+                  : 'Verify (Async)'}
               </button>
               <button
                 style={buttonStyle}
@@ -1625,10 +2928,10 @@ function LibraryItemDetail({
                       body: JSON.stringify({ kind, id, title }),
                     });
                     const j = await res.json();
-                    if (j.ok) alert('Added to Wanted');
-                    else alert('Failed to add to Wanted');
+                    if (j.ok) pushToast('success', 'Added to Wanted');
+                    else pushToast('error', 'Failed to add to Wanted');
                   } catch (e) {
-                    alert((e as Error).message);
+                    pushToast('error', (e as Error).message || 'Failed to add');
                   }
                 }}
               >
@@ -1637,15 +2940,116 @@ function LibraryItemDetail({
             </div>
           </div>
           <div>
-            <h2 style={{ marginTop: 0 }}>{title}</h2>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+              }}
+            >
+              <h2 style={{ marginTop: 0 }}>{title}</h2>
+              {!editMode && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button style={buttonStyle} onClick={() => setEditMode(true)}>
+                    Edit
+                  </button>
+                  <button
+                    style={{
+                      ...buttonStyle,
+                      borderColor: '#7f1d1d',
+                      color: '#f87171',
+                    }}
+                    disabled={deleting}
+                    onClick={onDelete}
+                  >
+                    {deleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {editMode && (
+              <div
+                style={{
+                  border: '1px solid #1f2937',
+                  borderRadius: 8,
+                  padding: 8,
+                  marginBottom: 12,
+                }}
+              >
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 180px',
+                    gap: 8,
+                  }}
+                >
+                  <label>
+                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Title</div>
+                    <input
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      style={inputStyle}
+                    />
+                  </label>
+                  <label>
+                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Kind</div>
+                    <select
+                      value={newKind}
+                      onChange={(e) => setNewKind(e.target.value as any)}
+                      style={{ ...inputStyle, padding: '6px 10px' }}
+                    >
+                      <option value="series">Series</option>
+                      <option value="movie">Movie</option>
+                      <option value="book">Book</option>
+                      <option value="music">Music</option>
+                    </select>
+                  </label>
+                </div>
+                <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
+                  <button
+                    style={buttonStyle}
+                    disabled={savingEdit}
+                    onClick={onSaveEdit}
+                  >
+                    {savingEdit ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    style={buttonStyle}
+                    onClick={() => {
+                      setEditMode(false);
+                      setNewTitle(String(item?.title || ''));
+                      setNewKind(String(item?.kind || 'series') as any);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             <div style={{ color: '#9aa4b2', marginBottom: 12 }}>
               Kind: {kind}
             </div>
-            <div style={{ border: '1px solid #1f2937', borderRadius: 8, padding: 8, marginBottom: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div
+              style={{
+                border: '1px solid #1f2937',
+                borderRadius: 8,
+                padding: 8,
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <strong>Quality Verification</strong>
                 <span style={{ color: '#9aa4b2', fontSize: 12 }}>
-                  {lastVerify?.analyzedAt ? new Date(lastVerify.analyzedAt).toLocaleString() : 'No result'}
+                  {lastVerify?.analyzedAt
+                    ? new Date(lastVerify.analyzedAt).toLocaleString()
+                    : 'No result'}
                 </span>
               </div>
               <div style={{ color: '#9aa4b2', marginTop: 6 }}>
@@ -1653,34 +3057,113 @@ function LibraryItemDetail({
                   ? `${(lastVerify.issues || []).length} issues — top severity: ${lastVerify.topSeverity || 'none'}`
                   : 'Run Verify Quality to generate a report.'}
               </div>
-              {lastVerify && Array.isArray(lastVerify.issues) && lastVerify.issues.length > 0 && (
-                <ul style={{ marginTop: 8, paddingLeft: 18 }}>
-                  {lastVerify.issues.map((it: any, idx: number) => (
-                    <li key={idx} style={{ marginBottom: 4 }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '2px 6px',
-                          borderRadius: 6,
-                          marginRight: 6,
-                          fontSize: 12,
-                          color: '#e5e7eb',
-                          background:
-                            it.severity === 'error'
-                              ? '#b91c1c'
-                              : it.severity === 'warn'
-                                ? '#b45309'
-                                : '#374151',
-                        }}
-                      >
-                        {String(it.severity || 'info').toUpperCase()}
-                      </span>
-                      <strong style={{ marginRight: 6 }}>{String(it.kind || 'unknown')}</strong>
-                      <span style={{ color: '#9aa4b2' }}>{String(it.message || '')}</span>
-                    </li>
-                  ))}
-                </ul>
+              {lastVerify &&
+                Array.isArray(lastVerify.issues) &&
+                lastVerify.issues.length > 0 && (
+                  <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+                    {lastVerify.issues.map((it: any, idx: number) => (
+                      <li key={idx} style={{ marginBottom: 4 }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 6px',
+                            borderRadius: 6,
+                            marginRight: 6,
+                            fontSize: 12,
+                            color: '#e5e7eb',
+                            background:
+                              it.severity === 'error'
+                                ? '#b91c1c'
+                                : it.severity === 'warn'
+                                  ? '#b45309'
+                                  : '#374151',
+                          }}
+                        >
+                          {String(it.severity || 'info').toUpperCase()}
+                        </span>
+                        <strong style={{ marginRight: 6 }}>
+                          {String(it.kind || 'unknown')}
+                        </strong>
+                        <span style={{ color: '#9aa4b2' }}>
+                          {String(it.message || '')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+            </div>
+            <div
+              style={{
+                border: '1px solid #1f2937',
+                borderRadius: 8,
+                padding: 8,
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <strong>Last Grab</strong>
+                <span style={{ color: '#9aa4b2', fontSize: 12 }}>
+                  {lastGrab?.at
+                    ? new Date(lastGrab.at).toLocaleString()
+                    : 'No grab yet'}
+                </span>
+              </div>
+              <div style={{ color: '#9aa4b2', marginTop: 6 }}>
+                {lastGrab
+                  ? `Client: ${lastGrab.client || 'unknown'} - Protocol: ${lastGrab.protocol || '-'}`
+                  : 'Once a grab is queued, details will appear here.'}
+              </div>
+              {lastGrab && (
+                <div
+                  style={{
+                    marginTop: 6,
+                    display: 'flex',
+                    gap: 8,
+                    color: lastGrab.ok ? '#34d399' : '#f87171',
+                  }}
+                >
+                  <span>{lastGrab.ok ? 'Success' : 'Failed'}</span>
+                  {lastGrab.status && (
+                    <span style={{ color: '#9aa4b2' }}>
+                      Status: {lastGrab.status}
+                    </span>
+                  )}
+                </div>
               )}
+              <div style={{ marginTop: 8 }}>
+                <button
+                  style={buttonStyle}
+                  disabled={!lastGrab || !lastGrab.link}
+                  onClick={handleRegrab}
+                >
+                  Re-grab Last
+                </button>
+                {lastGrab &&
+                  String(lastGrab.client || '') === 'sabnzbd' &&
+                  settings?.sabnzbd?.baseUrl && (
+                    <button
+                      style={{ ...buttonStyle, marginLeft: 8 }}
+                      onClick={() => {
+                        try {
+                          window.open(
+                            String(settings?.sabnzbd?.baseUrl || ''),
+                            '_blank'
+                          );
+                        } catch (_) {
+                          /* ignore */
+                        }
+                      }}
+                    >
+                      Open in SAB
+                    </button>
+                  )}
+              </div>
             </div>
             <div
               style={{
@@ -1689,6 +3172,59 @@ function LibraryItemDetail({
                 marginTop: 12,
               }}
             >
+              <h3>NZB Upload (SAB)</h3>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                <input
+                  type="file"
+                  accept=".nzb,application/x-nzb"
+                  onChange={(e) =>
+                    setNzbFile(
+                      e.target.files && e.target.files[0]
+                        ? e.target.files[0]
+                        : null
+                    )
+                  }
+                  style={{ ...inputStyle, padding: 6 }}
+                />
+                <button
+                  style={buttonStyle}
+                  disabled={!nzbFile || nzbUploading}
+                  onClick={async () => {
+                    if (!nzbFile) return;
+                    setNzbUploading(true);
+                    try {
+                      const fd = new FormData();
+                      fd.append('kind', singularKind);
+                      fd.append('id', id);
+                      fd.append('title', title);
+                      fd.append('protocol', 'usenet');
+                      fd.append('nzbUpload', nzbFile);
+                      const r = await fetch('/api/downloads/grab', {
+                        method: 'POST',
+                        body: fd,
+                      });
+                      const j = await r.json();
+                      if (!j.ok) throw new Error(j.error || 'upload_failed');
+                      pushToast(
+                        'success',
+                        j.queued ? 'Uploaded and queued' : 'Uploaded'
+                      );
+                      setNzbFile(null);
+                      refreshLastGrab();
+                    } catch (e) {
+                      pushToast(
+                        'error',
+                        (e as Error).message || 'Upload failed'
+                      );
+                    } finally {
+                      setNzbUploading(false);
+                    }
+                  }}
+                >
+                  {nzbUploading ? 'Uploading...' : 'Upload NZB'}
+                </button>
+              </div>
+
               <h3>Manual Search</h3>
               <form
                 onSubmit={async (e) => {
@@ -1699,12 +3235,19 @@ function LibraryItemDetail({
                     const r = await fetch('/api/indexers/search', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ q: query.trim(), kind, serverFilter }),
+                      body: JSON.stringify({
+                        q: query.trim(),
+                        kind,
+                        serverFilter,
+                      }),
                     });
                     const j = await r.json();
                     setResults(Array.isArray(j.results) ? j.results : []);
                   } catch (e2) {
-                    alert((e2 as Error).message);
+                    pushToast(
+                      'error',
+                      (e2 as Error).message || 'Search failed'
+                    );
                   } finally {
                     setSearching(false);
                   }
@@ -1722,13 +3265,21 @@ function LibraryItemDetail({
                 </button>
               </form>
               <div style={{ margin: '4px 0 8px' }}>
-                <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <label
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
                   <input
                     type="checkbox"
                     checked={serverFilter}
                     onChange={(e) => setServerFilter(e.target.checked)}
                   />
-                  <span style={{ color: '#9aa4b2' }}>Server filter by Quality</span>
+                  <span style={{ color: '#9aa4b2' }}>
+                    Server filter by Quality
+                  </span>
                 </label>
               </div>
               <div style={{ border: '1px solid #1f2937', borderRadius: 8 }}>
@@ -1775,30 +3326,42 @@ function LibraryItemDetail({
                             cutoff: '',
                           };
                           const allowedList = Array.isArray(prof.allowed)
-                            ? prof.allowed.map((x: any) => String(x).toLowerCase())
+                            ? prof.allowed.map((x: any) =>
+                                String(x).toLowerCase()
+                              )
                             : [];
-                          const cutoff = String(prof.cutoff || '').toLowerCase();
+                          const cutoff = String(
+                            prof.cutoff || ''
+                          ).toLowerCase();
                           const allowed =
                             allowedList.length === 0 ||
                             (q ? allowedList.includes(q) : false);
-                          const meetsCutoff = q && cutoff
-                            ? (qualityRank[q] || 0) >= (qualityRank[cutoff] || 0)
-                            : true;
+                          const meetsCutoff =
+                            q && cutoff
+                              ? (qualityRank[q] || 0) >=
+                                (qualityRank[cutoff] || 0)
+                              : true;
                           return (
                             <>
                               {t}
                               {q && (
-                                <span style={{ color: '#9aa4b2', marginLeft: 6 }}>
+                                <span
+                                  style={{ color: '#9aa4b2', marginLeft: 6 }}
+                                >
                                   [{q.toUpperCase()}]
                                 </span>
                               )}
                               {allowed && q && cutoff && !meetsCutoff && (
-                                <span style={{ color: '#f59e0b', marginLeft: 8 }}>
+                                <span
+                                  style={{ color: '#f59e0b', marginLeft: 8 }}
+                                >
                                   below cutoff
                                 </span>
                               )}
                               {!allowed && (
-                                <span style={{ color: '#ef4444', marginLeft: 8 }}>
+                                <span
+                                  style={{ color: '#ef4444', marginLeft: 8 }}
+                                >
                                   not allowed
                                 </span>
                               )}
@@ -1820,17 +3383,26 @@ function LibraryItemDetail({
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                   kind,
-                                  id: '',
+                                  id,
                                   title: r.title,
                                   link: (r as any).link,
                                   protocol: (r as any).protocol || 'torrent',
                                 }),
                               });
                               const j = await res.json();
-                              if (j.ok) alert('Queued for download');
-                              else alert('Grab failed: ' + (j.error || 'unknown'));
+                              if (j.ok)
+                                pushToast('success', 'Queued for download');
+                              else
+                                pushToast(
+                                  'error',
+                                  'Grab failed: ' + (j.error || 'unknown')
+                                );
+                              if (j.ok) refreshLastGrab();
                             } catch (e) {
-                              alert((e as Error).message);
+                              pushToast(
+                                'error',
+                                (e as Error).message || 'Grab failed'
+                              );
                             }
                           }}
                           disabled={(() => {
@@ -1841,7 +3413,9 @@ function LibraryItemDetail({
                               cutoff: '',
                             };
                             const allowedList = Array.isArray(prof.allowed)
-                              ? prof.allowed.map((x: any) => String(x).toLowerCase())
+                              ? prof.allowed.map((x: any) =>
+                                  String(x).toLowerCase()
+                                )
                               : [];
                             if (allowedList.length === 0) return false;
                             return !(q && allowedList.includes(q));
@@ -1922,14 +3496,14 @@ function manageArtwork(state: any, it: any) {
     if (!s) return;
     const n = Number(s);
     if (!Number.isFinite(n)) {
-      alert('Invalid season number');
+      pushToast('error', 'Invalid season number');
       return;
     }
     season = Math.max(0, Math.min(99, Math.trunc(n)));
   }
   const root = state.atRoot ? undefined : state.root.id;
   if (!root) {
-    alert('Open a library root first');
+    pushToast('error', 'Open a library root first');
     return;
   }
   fetch('/api/files/artwork/assign', {
@@ -1942,9 +3516,9 @@ function manageArtwork(state: any, it: any) {
       return r.json();
     })
     .then((j) => {
-      alert('Artwork set: ' + j.target);
+      pushToast('success', 'Artwork set: ' + j.target);
     })
-    .catch((e) => alert(String(e)));
+    .catch((e) => pushToast('error', String(e)));
 }
 
 function LibraryAdd({ kindLabel }: { kindLabel: string }) {
@@ -1958,7 +3532,7 @@ function LibraryAdd({ kindLabel }: { kindLabel: string }) {
         <input placeholder="Search by title" style={inputStyle} />
         <button
           style={buttonStyle}
-          onClick={() => alert('Search is not implemented yet')}
+          onClick={() => pushToast('info', 'Search is not implemented yet')}
         >
           Search
         </button>
@@ -2141,4 +3715,37 @@ function FileBrowser() {
       )}
     </div>
   );
+}
+// Lightweight toast helpers
+type ToastKind = 'success' | 'error' | 'info';
+type ToastItem = {
+  id: number;
+  kind: ToastKind;
+  title?: string;
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+};
+function pushToast(
+  kind: ToastKind,
+  message: string,
+  title?: string,
+  action?: { label: string; run: () => void }
+) {
+  try {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    const detail: ToastItem = {
+      id,
+      kind,
+      message,
+      ...(title !== undefined && { title }),
+      ...(action?.label !== undefined && { actionLabel: action.label }),
+      ...(action?.run !== undefined && { onAction: action.run }),
+    };
+    window.dispatchEvent(new CustomEvent('toast:push', { detail }));
+  } catch {
+    // fallback if events fail
+    // eslint-disable-next-line no-alert
+    alert(message);
+  }
 }

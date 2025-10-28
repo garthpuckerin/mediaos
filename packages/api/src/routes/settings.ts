@@ -7,13 +7,18 @@ type QB = DlCommon & {
   username?: string;
   password?: string;
   hasPassword?: boolean;
+  category?: string;
 };
 type NZB = DlCommon & {
   username?: string;
   password?: string;
   hasPassword?: boolean;
 };
-type SAB = DlCommon & { apiKey?: string };
+type SAB = DlCommon & {
+  apiKey?: string;
+  hasApiKey?: boolean;
+  category?: string;
+};
 
 type Downloaders = {
   qbittorrent: QB;
@@ -43,6 +48,7 @@ function normalize(obj: any): Downloaders {
     baseUrl: obj?.qbittorrent?.baseUrl || undefined,
     username: obj?.qbittorrent?.username || undefined,
     hasPassword: !!obj?.qbittorrent?.password,
+    category: obj?.qbittorrent?.category || undefined,
   };
   const qbT = isFiniteNumber(obj?.qbittorrent?.timeoutMs);
   if (typeof qbT === 'number') qb.timeoutMs = qbT;
@@ -60,6 +66,8 @@ function normalize(obj: any): Downloaders {
     enabled: !!obj?.sabnzbd?.enabled,
     baseUrl: obj?.sabnzbd?.baseUrl || undefined,
     apiKey: obj?.sabnzbd?.apiKey || undefined,
+    hasApiKey: !!obj?.sabnzbd?.apiKey,
+    category: obj?.sabnzbd?.category || undefined,
   };
   const sabT = isFiniteNumber(obj?.sabnzbd?.timeoutMs);
   if (typeof sabT === 'number') sab.timeoutMs = sabT;
@@ -89,6 +97,7 @@ async function saveDownloaders(payload: Downloaders, existing?: any) {
           ? payload.qbittorrent.password
           : existing?.qbittorrent?.password || undefined,
       timeoutMs: isFiniteNumber(payload.qbittorrent.timeoutMs),
+      category: payload.qbittorrent.category || undefined,
     },
     nzbget: {
       enabled: !!payload.nzbget.enabled,
@@ -105,6 +114,7 @@ async function saveDownloaders(payload: Downloaders, existing?: any) {
       baseUrl: payload.sabnzbd.baseUrl || undefined,
       apiKey: payload.sabnzbd.apiKey || undefined,
       timeoutMs: isFiniteNumber(payload.sabnzbd.timeoutMs),
+      category: payload.sabnzbd.category || undefined,
     },
   } as any;
   await ensureDir(CONFIG_FILE);
@@ -124,6 +134,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       baseUrl: body?.qbittorrent?.baseUrl || undefined,
       username: body?.qbittorrent?.username || undefined,
       password: body?.qbittorrent?.password || undefined,
+      category: body?.qbittorrent?.category || undefined,
     };
     const qbInT = isFiniteNumber(body?.qbittorrent?.timeoutMs);
     if (typeof qbInT === 'number') qbIn.timeoutMs = qbInT;
@@ -141,6 +152,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       enabled: !!body?.sabnzbd?.enabled,
       baseUrl: body?.sabnzbd?.baseUrl || undefined,
       apiKey: body?.sabnzbd?.apiKey || undefined,
+      category: body?.sabnzbd?.category || undefined,
     };
     const sabInT = isFiniteNumber(body?.sabnzbd?.timeoutMs);
     if (typeof sabInT === 'number') sabIn.timeoutMs = sabInT;

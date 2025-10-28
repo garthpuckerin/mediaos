@@ -2,7 +2,17 @@ import type { FastifyPluginAsync } from 'fastify';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-type WantedItem = { id: string; title: string; kind: string; addedAt: string };
+type WantedItem = {
+  id: string;
+  title: string;
+  kind: string;
+  addedAt: string;
+  lastScan?: {
+    at: string;
+    found: number;
+    grabbed: number;
+  };
+};
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
 const WANTED_FILE = path.join(CONFIG_DIR, 'wanted.json');
@@ -56,21 +66,76 @@ const plugin: FastifyPluginAsync = async (app) => {
     const enqueue = !!b.enqueue;
     const items = await loadWanted();
     const results: any[] = [];
+    const scannedAt = new Date().toISOString();
+    const rand = (min: number, max: number) =>
+      min + Math.floor(Math.random() * (max - min + 1));
+    const pick = <T>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+    const sizes = [
+      '700MB',
+      '900MB',
+      '1.2GB',
+      '1.6GB',
+      '2.4GB',
+      '3.4GB',
+      '5.0GB',
+      '7.2GB',
+    ];
+    const quals = ['720p', '1080p', '2160p'];
+    const tags = ['WEB-DL', 'BluRay', 'x264', 'x265', 'Remux'];
     for (const it of items) {
-      // Minimal scan: reuse simple titles to form a matched result (stub)
-      const found = [
-        { title: `${it.title} 1080p`, protocol: 'torrent', link: 'magnet:?xt=urn:btih:222...' },
-      ];
+      // Create a small variety of results favoring Usenet in this build
+      const count = rand(0, 3);
+      const arr: any[] = [];
+      for (let i = 0; i < count; i++) {
+        const q = pick(quals);
+        const t = pick(tags);
+        const sz = pick(sizes);
+        // favor usenet ~70%
+        const isUsenet = Math.random() < 0.7;
+        if (isUsenet) {
+          arr.push({
+            title: `${it.title} ${q} ${t}`,
+            size: sz,
+            protocol: 'usenet',
+            link: `https://example.com/fake/${encodeURIComponent(it.title)}.${q}.nzb`,
+          });
+        } else {
+          arr.push({
+            title: `${it.title} ${q} ${t}`,
+            size: sz,
+            seeders: rand(20, 500),
+            protocol: 'torrent',
+            link: `magnet:?xt=urn:btih:${Math.random().toString(16).slice(2).padEnd(40, 'a')}`,
+          });
+        }
+      }
+      const found = arr;
       let grabbed = 0;
       if (enqueue && found.length > 0) {
         try {
-          const first = found[0] as any;
+          // Prefer first usenet result if any
+          const nzb =
+            found.find((f: any) => f.protocol === 'usenet') ||
+            (found[0] as any);
           const res = await app.inject({
             method: 'POST',
             url: '/api/downloads/grab',
-            payload: first && first.title && first.link && first.protocol
-              ? { kind: it.kind, id: it.id, title: first.title, link: first.link, protocol: first.protocol }
-              : { kind: it.kind, id: it.id, title: `${it.title} 1080p`, link: 'magnet:?xt=urn:btih:222...', protocol: 'torrent' },
+            payload:
+              nzb && nzb.title && nzb.link && nzb.protocol
+                ? {
+                    kind: it.kind,
+                    id: it.id,
+                    title: nzb.title,
+                    link: nzb.link,
+                    protocol: nzb.protocol,
+                  }
+                : {
+                    kind: it.kind,
+                    id: it.id,
+                    title: `${it.title} 1080p`,
+                    link: 'https://example.com/fakefile.nzb',
+                    protocol: 'usenet',
+                  },
           });
           const j = res.json() as any;
           if (j && j.ok) grabbed = 1;
@@ -79,9 +144,19 @@ const plugin: FastifyPluginAsync = async (app) => {
           void 0;
         }
       }
-      results.push({ key: `${it.kind}:${it.id}`, found: found.length, grabbed });
+      it.lastScan = {
+        at: scannedAt,
+        found: found.length,
+        grabbed,
+      };
+      results.push({
+        key: `${it.kind}:${it.id}`,
+        found: found.length,
+        grabbed,
+      });
     }
-    return { ok: true, scanned: items.length, results };
+    await saveWanted(items);
+    return { ok: true, scanned: items.length, results, scannedAt };
   });
 
   app.delete('/:kind/:id', async (req) => {

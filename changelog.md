@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to MediaOS will be documented in this file.
 
@@ -7,23 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [0.3.0] - 2025-10-22
+
 ### Added
 
-- BullMQ-backed job orchestration with structured results and Redis/inline parity
-- /api/dashboard/overview aggregate endpoint and refreshed React dashboard widgets
-- SQLite seeding script for golden media, request, indexer, and subtitle data
-- Dashboard integration tests covering summary metrics
-- NZBGet and SABnzbd downloader adapters with typed API clients\n- /api/downloads endpoint, dashboard stats, and queue processing for torrent/Usenet jobs
-- Settings API for downloader configuration
-  - GET/POST /api/settings/downloaders + GET /api/settings
-  - File-backed config at config/downloaders.json (overrides env) with secret masking
-- Files API for safe library browsing (root-scoped)
-  - GET /api/files/browse (roots or directory listing)
-  - POST /api/files/artwork/assign (copy image to poster/background/banner/seasonXX filenames)
-- UI: Library-first navigation with media kinds and shared subpages
-  - Top-level: Library, Calendar, Activity, Settings, System
-  - Library kinds: Series, Movies, Books, Music; pages: List, Add New, Library Import
-  - Shared components for Add and Import; FileBrowser + Artwork actions
+- Library: file-backed persistence at `config/library.json`; `PATCH /api/library/:id`, `DELETE /api/library/:id`.
+- SAB-focused downloads:
+  - NZB upload (multipart) from Item Detail; category respected when configured.
+  - Live SAB queue with actions (Pause/Resume/Remove) via `GET /api/activity/live` and `POST /api/activity/action`.
+  - SAB history merged into Activity → History.
+  - Optional auto-verify on completion (SAB history poller; dedup via `config/monitor.json`).
+- Item Detail: Last Grab panel with Re-grab, Open in SAB, and manual Verify.
+- Activity UI: Verify/"Verify again" actions; progress, ETA, and quick Open.
+- Calendar: clickable events navigate to item detail; highlight soon events.
+- Wanted: richer stub scan results (mix of Usenet/Torrent with sizes/qualities); Scan & Queue prefers Usenet.
+- In-app toast notifications replace alerts; Undo for library delete.
+- Settings: SAB category, qBittorrent category (configurable; SAB-focused by default).
+- Docs: enhancements backlog at `docs/ENHANCEMENTS.md` and release process at `docs/RELEASE.md`.
+  Nothing yet.
+
+## [0.3.0] - 2025-10-22
+
+### Added
+
+- Library: file-backed persistence at config/library.json; PATCH /api/library/:id, DELETE /api/library/:id.
+- SAB-focused downloads:
+  - NZB upload (multipart) from Item Detail; category respected when configured.
+  - Live SAB queue with actions (Pause/Resume/Remove) via GET /api/activity/live and POST /api/activity/action.
+  - SAB history merged into Activity → History.
+  - Optional auto-verify on completion (SAB history poller; dedup via config/monitor.json).
+- Item Detail: Last Grab panel with Re-grab, Open in SAB, and manual Verify.
+- Activity UI: Verify/"Verify again" actions; progress, ETA, and quick Open.
+- Calendar: clickable events navigate to item detail; highlight soon events.
+- Wanted: richer stub scan results (mix of Usenet/Torrent with sizes/qualities); Scan & Queue prefers Usenet.
+- In-app toast notifications replace alerts; Undo for library delete.
+- Settings: SAB category, qBittorrent category (configurable; SAB-focused by default).
+- Docs: enhancements backlog at docs/ENHANCEMENTS.md
 
 ### UI
 
@@ -49,6 +70,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - recentFailures (capped) for alerts/panels
 - Job processor config live-reload signature; safer queue add options (jobId optional)
 - UI refactor to hash-based pages (no external router) pending react-router adoption
+
+#### UX polish
+
+- Library lists show badges for failed grabs and warn/error verification state
+- Post‑grab flows fetch ` /api/downloads/last` to update UI immediately
 
 ### Security
 

@@ -43,10 +43,22 @@ const plugin: FastifyPluginAsync = async (app) => {
       cat: z.string().optional(),
       kind: z.string().optional(),
       serverFilter: z.boolean().optional(),
+      protocol: z.enum(['torrent', 'usenet', 'any']).optional(),
+      minSeeders: z.number().int().nonnegative().optional(),
+      minSizeMB: z.number().int().nonnegative().optional(),
+      maxSizeMB: z.number().int().nonnegative().optional(),
     });
-    const { q, kind, serverFilter } = schema.parse(req.body);
+    const {
+      q,
+      kind,
+      serverFilter,
+      protocol = 'any',
+      minSeeders,
+      minSizeMB,
+      maxSizeMB,
+    } = schema.parse(req.body);
     // TODO: call adapters; this is a stub
-  let results = [
+    let results = [
       {
         title: `RESULT 2160p for ${q}`,
         size: '3.2GB',
@@ -83,6 +95,60 @@ const plugin: FastifyPluginAsync = async (app) => {
       },
     ];
 
+    // Protocol filter
+    if (protocol && protocol !== 'any') {
+      results = results.filter(
+        (r) => String((r as any).protocol || '') === protocol
+      );
+    }
+
+    // Size filter (MB)
+    if (typeof minSizeMB === 'number' || typeof maxSizeMB === 'number') {
+      const parseSize = (s: string): number | undefined => {
+        const m = (s || '')
+          .toLowerCase()
+          .match(/([0-9]+\.?[0-9]*)\s*(kb|mb|gb|tb)/);
+        if (!m) return undefined;
+        const n = Number(m[1]);
+        const unit = m[2];
+        if (!Number.isFinite(n)) return undefined;
+        const mb =
+          unit === 'kb'
+            ? n / 1024
+            : unit === 'mb'
+              ? n
+              : unit === 'gb'
+                ? n * 1024
+                : n * 1024 * 1024;
+        return mb;
+      };
+      results = results.filter((r) => {
+        const mb = parseSize(String((r as any).size || ''));
+        if (
+          typeof minSizeMB === 'number' &&
+          typeof mb === 'number' &&
+          mb < minSizeMB
+        )
+          return false;
+        if (
+          typeof maxSizeMB === 'number' &&
+          typeof mb === 'number' &&
+          mb > maxSizeMB
+        )
+          return false;
+        return true;
+      });
+    }
+
+    // Seeders filter (torrent only)
+    if (typeof minSeeders === 'number') {
+      results = results.filter((r) => {
+        if (String((r as any).protocol || '') !== 'torrent') return true;
+        const s = (r as any).seeders;
+        return typeof s !== 'number' ? true : s >= minSeeders;
+      });
+    }
+
     if (serverFilter && kind) {
       // Load quality profiles
       const CONFIG_DIR = path.join(process.cwd(), 'config');
@@ -111,7 +177,10 @@ const plugin: FastifyPluginAsync = async (app) => {
         let best: string | null = null;
         for (const qk of Object.keys(qualityRank)) {
           if (s.includes(qk)) {
-            const cur = best && typeof (qualityRank as any)[best] === 'number' ? (qualityRank as any)[best] : -Infinity;
+            const cur =
+              best && typeof (qualityRank as any)[best] === 'number'
+                ? (qualityRank as any)[best]
+                : -Infinity;
             const next = (qualityRank as any)[qk];
             if (typeof next === 'number' && next > cur) best = qk;
           }
@@ -125,10 +194,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       });
     }
 
-    return {
-      ok: true,
-      results,
-    };
+    return { ok: true, results };
   });
 
   app.patch('/:id', async (req) => {

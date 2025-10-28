@@ -97,5 +97,8 @@
     "printWidth": 80,
     "tabWidth": 2,
     "useTabs": false
+  },
+  "dependencies": {
+    "@fastify/multipart": "^9.3.0"
   }
 }
