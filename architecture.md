@@ -15,6 +15,7 @@ MediaOS is a unified media management platform built as a monorepo with a modern
 ## Technology Stack
 
 ### Core Technologies
+
 - **Runtime:** Node.js 18+ (LTS)
 - **Language:** TypeScript 5.6+
 - **Package Manager:** npm 9+
@@ -24,11 +25,14 @@ MediaOS is a unified media management platform built as a monorepo with a modern
 - **Containerization:** Docker with multi-stage builds
 
 ### Development Tools
+
 - **Linting:** ESLint with TypeScript rules
 - **Formatting:** Prettier
 - **Testing:** Vitest (unit), Playwright (E2E)
 - **Quality Gates:** Husky + lint-staged
 - **CI/CD:** GitHub Actions
+- **Branch Management:** Comprehensive Git workflow with protection rules
+- **AI Guardrails:** Systematic development protocols and documentation sync
 
 ## Package Structure
 
@@ -45,6 +49,7 @@ packages/
 **Purpose:** REST API server with Fastify framework
 
 **Key Components:**
+
 - **Routes:** API endpoint handlers (`/api/*`)
 - **Services:** Business logic layer
 - **Models:** Data models and validation
@@ -52,6 +57,7 @@ packages/
 - **Database:** SQLite/PostgreSQL integration
 
 **Architecture:**
+
 ```
 src/
 ├── index.ts           # Server entry point
@@ -75,6 +81,7 @@ src/
 **Purpose:** React-based user interface
 
 **Key Components:**
+
 - **Components:** Reusable UI components
 - **Pages:** Route-based page components
 - **Hooks:** Custom React hooks
@@ -82,6 +89,7 @@ src/
 - **Utils:** Frontend utility functions
 
 **Architecture:**
+
 ```
 src/
 ├── main.tsx           # Application entry point
@@ -100,6 +108,7 @@ src/
 **Purpose:** Background job processing
 
 **Key Components:**
+
 - **Job Queue:** Task scheduling and execution
 - **Processors:** Specific job handlers
 - **Schedulers:** Cron-like scheduling
@@ -110,6 +119,7 @@ src/
 **Purpose:** External service integrations
 
 **Key Components:**
+
 - **Indexers:** Torrent/Usenet indexer adapters
 - **Downloaders:** qBittorrent, SABnzbd, NZBGet
 - **Subtitles:** Subtitle provider adapters
@@ -120,6 +130,7 @@ src/
 ### Schema Design
 
 **Core Tables:**
+
 - `media_items` - Movies, TV shows, music, books
 - `requests` - User media requests
 - `indexers` - Configured indexers

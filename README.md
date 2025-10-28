@@ -104,18 +104,18 @@ npm run test:e2e
 
 ## 🔧 Development Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development servers |
-| `npm run build` | Build all packages |
-| `npm test` | Run unit tests |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run lint` | Run ESLint |
-| `npm run lint:fix` | Fix ESLint issues |
-| `npm run format` | Format code with Prettier |
-| `npm run type-check` | Run TypeScript type checking |
-| `npm run db:migrate` | Run database migrations |
-| `npm run db:seed` | Seed database with sample data |
+| Command              | Description                    |
+| -------------------- | ------------------------------ |
+| `npm run dev`        | Start development servers      |
+| `npm run build`      | Build all packages             |
+| `npm test`           | Run unit tests                 |
+| `npm run test:e2e`   | Run E2E tests                  |
+| `npm run lint`       | Run ESLint                     |
+| `npm run lint:fix`   | Fix ESLint issues              |
+| `npm run format`     | Format code with Prettier      |
+| `npm run type-check` | Run TypeScript type checking   |
+| `npm run db:migrate` | Run database migrations        |
+| `npm run db:seed`    | Seed database with sample data |
 
 ## 🐳 Docker Volumes (Synology)
 
@@ -125,11 +125,14 @@ npm run test:e2e
 
 ## 📚 Documentation
 
-- [Product Requirements Document](prd.md) - Complete feature specifications
-- [Architecture Documentation](architecture.md) - Technical architecture details
-- [Contributing Guidelines](contributing.md) - How to contribute
-- [Development Setup](development.md) - Development environment guide
-- [Changelog](changelog.md) - Version history and changes
+- [Product Requirements Document](PRD.md) - Complete feature specifications
+- [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
+- [Development Setup](DEVELOPMENT.md) - Development environment guide
+- [AI Guardrails](AI_GUARDRAILS.md) - AI development standards and protocols
+- [Branch Management](BRANCH_MANAGEMENT.md) - Git workflow and branch strategy
+- [Sprint Planning & Roadmap](SPRINT_PLANNING.md) - Development sprints and milestones
+- [Changelog](CHANGELOG.md) - Version history and changes
 
 ## 🔒 Security
 

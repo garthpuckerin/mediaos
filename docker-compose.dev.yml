@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  mediaos-dev:
+    build: .
+    container_name: mediaos-dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./config:/config
+      - ./packages/web:/app/packages/web
+      - ./packages/api:/app/packages/api
+      - ./packages/workers:/app/packages/workers
+      - ./packages/adapters:/app/packages/adapters
+      - ./db:/app/db
+      - /volume1/media/movies:/media/movies:ro
+      - /volume1/media/tv:/media/tv:ro
+      - /volume1/media/music:/media/music:ro
+      - /volume1/downloads:/downloads:rw
+    command: ["pnpm", "-w", "dev"]

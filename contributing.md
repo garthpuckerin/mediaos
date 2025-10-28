@@ -29,24 +29,28 @@ This project adheres to a code of conduct. By participating, you are expected to
 ### Development Setup
 
 1. **Fork and Clone**
+
    ```bash
    git clone https://github.com/your-username/MediaOS.git
    cd MediaOS
    ```
 
 2. **Install Dependencies**
+
    ```bash
    corepack enable
    pnpm install
    ```
 
 3. **Environment Configuration**
+
    ```bash
    cp env.example .env
    # Edit .env with your configuration
    ```
 
 4. **Database Setup**
+
    ```bash
    pnpm db:migrate
    pnpm db:seed
@@ -65,6 +69,8 @@ This project adheres to a code of conduct. By participating, you are expected to
 - **Feature branches:** Create from `feature/2.2` (latest feature branch)
 - **Hotfix branches:** Create from `main` for critical fixes
 - **Release branches:** Create from `develop` for releases
+
+**Branch Protection:** All branches have protection rules requiring reviews and status checks. See [Branch Management](BRANCH_MANAGEMENT.md) for detailed protocols.
 
 ### Branch Naming Convention
 
@@ -87,6 +93,7 @@ type(scope): description
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -96,6 +103,7 @@ type(scope): description
 - `chore`: Maintenance tasks
 
 **Examples:**
+
 ```
 feat(api): add user authentication endpoint
 fix(web): resolve artwork modal display issue
@@ -164,9 +172,9 @@ describe('MediaService', () => {
     const mediaItem = await mediaService.create({
       title: 'Test Movie',
       year: 2024,
-      type: 'movie'
+      type: 'movie',
     });
-    
+
     expect(mediaItem).toBeDefined();
     expect(mediaItem.title).toBe('Test Movie');
   });
@@ -194,6 +202,7 @@ pnpm test:e2e
 ### Before Submitting
 
 1. **Run Quality Checks**
+
    ```bash
    pnpm lint
    pnpm format:check
@@ -202,14 +211,18 @@ pnpm test:e2e
    ```
 
 2. **Update Documentation**
-   - Update relevant documentation
+   - Update relevant documentation (mandatory per AI guardrails)
    - Add/update API documentation
    - Update README if needed
+   - Ensure documentation synchronization
 
 3. **Test Your Changes**
    - Test locally
    - Ensure all tests pass
    - Test edge cases
+   - Verify documentation accuracy
+
+**AI Guardrails Compliance:** All changes must follow our [AI Guardrails](AI_GUARDRAILS.md) including systematic root cause analysis and documentation synchronization.
 
 ### PR Requirements
 
@@ -224,21 +237,25 @@ pnpm test:e2e
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests pass
 - [ ] Integration tests pass
 - [ ] E2E tests pass
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -289,6 +306,7 @@ For feature requests, please include:
 ### Daily Development
 
 1. **Start Development**
+
    ```bash
    pnpm dev
    ```
@@ -299,6 +317,7 @@ For feature requests, please include:
    - Update documentation
 
 3. **Quality Checks**
+
    ```bash
    pnpm lint:fix
    pnpm format
@@ -338,6 +357,7 @@ For feature requests, please include:
 ## Recognition
 
 Contributors will be recognized in:
+
 - CONTRIBUTORS.md file
 - Release notes
 - Project documentation
