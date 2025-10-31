@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const SAB_ENABLED =
-  process.env.E2E_SAB === '1' || process.env.E2E_SAB === 'true';
+  process.env['E2E_SAB'] === '1' || process.env['E2E_SAB'] === 'true';
 
 test.describe('SAB-only flows (smoke)', () => {
   test.skip(!SAB_ENABLED, 'Set E2E_SAB=1 to enable SAB smoke tests');
@@ -15,7 +15,7 @@ test.describe('SAB-only flows (smoke)', () => {
     await firstCard.click();
 
     // Upload NZB (requires a test NZB path configured by the runner)
-    const nzbPath = process.env.E2E_NZB_PATH;
+    const nzbPath = process.env['E2E_NZB_PATH'];
     expect(nzbPath, 'E2E_NZB_PATH not set').toBeTruthy();
     const fileInput = page.locator('input[type="file"][name="nzbUpload"]');
     await fileInput.setInputFiles(nzbPath!);
