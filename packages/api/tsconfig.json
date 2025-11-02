@@ -5,6 +5,10 @@
     "moduleResolution": "Node",
     "outDir": "dist",
     "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@mediaos/workers": ["../workers/src"]
+    },
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true

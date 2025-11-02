@@ -1,38 +1,39 @@
 # MediaOS Development Environment
 
 ## Node.js Version
+
 - **Required:** Node.js 18+ (LTS recommended)
-- **Package Manager:** pnpm (enabled via corepack)
+- **Package Manager:** npm (workspaces)
 
 ## Environment Setup
+
 ```bash
-# Enable pnpm
-corepack enable || npm i -g pnpm
-
 # Install dependencies
-pnpm install
+npm install
 
-# Development mode
-pnpm dev
+# Development mode (API + Web)
+npm run dev
 
 # Production build
-pnpm build
-pnpm start
+npm run build
+npm start
 ```
 
 ## Development Scripts
-- `pnpm dev` - Start API + Web in development mode
-- `pnpm build` - Build all packages for production
-- `pnpm start` - Start production server
-- `pnpm test` - Run all tests
-- `pnpm test:watch` - Run tests in watch mode
-- `pnpm lint` - Run ESLint on all packages
-- `pnpm lint:fix` - Fix ESLint issues automatically
-- `pnpm format` - Format code with Prettier
-- `pnpm type-check` - Run TypeScript type checking
-- `pnpm clean` - Clean build artifacts
+
+- `npm run dev` - Start API + Web in development mode
+- `npm run build` - Build all packages for production
+- `npm start` - Start production server
+- `npm test` - Run all tests
+- `npm run test:watch` - Run tests in watch mode
+- `npm run lint` - Run ESLint on all packages
+- `npm run lint:fix` - Fix ESLint issues automatically
+- `npm run format` - Format code with Prettier
+- `npm run type-check` - Run TypeScript type checking
+- `npm run clean` - Clean build artifacts
 
 ## Code Quality Standards
+
 - **ESLint:** Enforced code quality and style
 - **Prettier:** Consistent code formatting
 - **TypeScript:** Strict type checking enabled
@@ -40,18 +41,21 @@ pnpm start
 - **lint-staged:** Run linters on staged files only
 
 ## Testing
+
 - **Framework:** Vitest for fast testing
 - **Coverage:** Minimum 80% coverage required
 - **E2E:** Playwright for end-to-end testing
 - **API Testing:** Supertest for API endpoint testing
 
 ## Database
+
 - **Default:** SQLite with WAL mode
 - **Migrations:** Version-controlled schema changes
 - **Seeding:** Development data seeding
 - **Backup:** Automated backup strategies
 
 ## Docker Development
+
 ```bash
 # Build development image
 docker build -t mediaos:dev .
@@ -61,7 +65,8 @@ docker compose -f docker-compose.dev.yml up -d
 ```
 
 ## Contributing
-1. Create feature branch from `feature/2.2`
+
+1. Create a feature branch from the latest sprint feature branch
 2. Make changes with tests
 3. Update documentation (mandatory per AI guardrails)
 4. Run quality checks: `pnpm lint && pnpm test && pnpm type-check`
@@ -71,7 +76,8 @@ docker compose -f docker-compose.dev.yml up -d
 **Important:** All changes must follow our [AI Guardrails](AI_GUARDRAILS.md) and [Branch Management](BRANCH_MANAGEMENT.md) protocols.
 
 ## Architecture
-- **Monorepo:** pnpm workspaces
+
+- **Monorepo:** npm workspaces
 - **API:** Fastify + TypeScript
 - **Web:** React + Vite
 - **Workers:** Background job processing

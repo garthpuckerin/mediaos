@@ -1,61 +1,70 @@
-import { Database } from 'sqlite3';
-import { readFileSync } from 'fs';
-import { join } from 'path';
-import { promisify } from 'util';
+import sqlite3 from 'sqlite3';
 
-const run = promisify(Database.prototype.run.bind(new Database()));
+export interface DatabaseConfig {
+  url: string;
+  createTables: boolean;
+  seedData: boolean;
+}
+
+export class DatabaseMigrator {
+  private db: sqlite3.Database;
+
+  constructor(config: DatabaseConfig) {
+    this.db = new sqlite3.Database(config.url);
+  }
+
+  async migrate(): Promise<void> {
+    try {
+      // Create basic media_items table for Sprint 1
+      const createTableSQL = `
+        CREATE TABLE IF NOT EXISTS media_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          kind TEXT NOT NULL CHECK (kind IN ('movie', 'series', 'music', 'book')),
+          year INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `;
+
+      await this.runAsync(createTableSQL);
+      console.log('Database migration completed successfully');
+    } catch (error) {
+      console.error('Migration failed:', error);
+      throw error;
+    }
+  }
+
+  private runAsync(
+    sql: string,
+    params: unknown[] = []
+  ): Promise<{ lastID: number; changes: number }> {
+    return new Promise((resolve, reject) => {
+      this.db.run(sql, params, function (err) {
+        if (err) reject(err);
+        else resolve({ lastID: this.lastID, changes: this.changes });
+      });
+    });
+  }
+
+  close(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.db.close((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  }
+}
 
 export async function migrate(): Promise<void> {
-  const db = new Database(process.env.DATABASE_URL || './config/mediaos.db');
-  const runAsync = promisify(db.run.bind(db));
-  
-  try {
-    // Read and execute migration files
-    const migrationPath = join(__dirname, '../migrations/0001_init.sql');
-    const migrationSQL = readFileSync(migrationPath, 'utf8');
-    
-    await runAsync(migrationSQL);
-    console.log('✅ Database migration completed successfully');
-  } catch (error) {
-    console.error('❌ Migration failed:', error);
-    throw error;
-  } finally {
-    db.close();
-  }
-}
+  const config: DatabaseConfig = {
+    url: process.env['DATABASE_URL'] || './config/mediaos.db',
+    createTables: true,
+    seedData: false,
+  };
 
-export async function seed(): Promise<void> {
-  const db = new Database(process.env.DATABASE_URL || './config/mediaos.db');
-  const runAsync = promisify(db.run.bind(db));
-  
-  try {
-    // Read and execute seed files
-    const seedPath = join(__dirname, '../seeds/001_initial_data.sql');
-    const seedSQL = readFileSync(seedPath, 'utf8');
-    
-    await runAsync(seedSQL);
-    console.log('✅ Database seeding completed successfully');
-  } catch (error) {
-    console.error('❌ Seeding failed:', error);
-    throw error;
-  } finally {
-    db.close();
-  }
-}
-
-// CLI interface
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const command = process.argv[2];
-  
-  switch (command) {
-    case 'migrate':
-      await migrate();
-      break;
-    case 'seed':
-      await seed();
-      break;
-    default:
-      console.log('Usage: node migrate.js [migrate|seed]');
-      process.exit(1);
-  }
+  const migrator = new DatabaseMigrator(config);
+  await migrator.migrate();
+  await migrator.close();
 }

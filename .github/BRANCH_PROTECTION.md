@@ -5,6 +5,7 @@ This document outlines the GitHub branch protection rules and settings for the M
 ## Branch Protection Rules
 
 ### Main Branch (`main`)
+
 - **Protect matching branches**: `main`
 - **Require a pull request before merging**: ✅
   - Required number of reviewers: 2
@@ -27,6 +28,7 @@ This document outlines the GitHub branch protection rules and settings for the M
 - **Allow deletions**: ❌
 
 ### Develop Branch (`develop`)
+
 - **Protect matching branches**: `develop`
 - **Require a pull request before merging**: ✅
   - Required number of reviewers: 1
@@ -47,6 +49,7 @@ This document outlines the GitHub branch protection rules and settings for the M
 - **Allow deletions**: ❌
 
 ### Feature Branch (`feature/2.2`)
+
 - **Protect matching branches**: `feature/2.2`
 - **Require a pull request before merging**: ✅
   - Required number of reviewers: 1
@@ -67,6 +70,7 @@ This document outlines the GitHub branch protection rules and settings for the M
 ## Required Status Checks
 
 ### CI/CD Pipeline Checks
+
 1. **Lint and Format Check**
    - ESLint compliance
    - Prettier formatting
@@ -92,6 +96,7 @@ This document outlines the GitHub branch protection rules and settings for the M
 ## Code Owner Requirements
 
 ### CODEOWNERS File
+
 ```
 # Global owners
 * @mediaos-team
@@ -121,22 +126,27 @@ db/ @database-team
 ## Pull Request Templates
 
 ### Feature Pull Request Template
+
 ```markdown
 ## Description
+
 Brief description of the feature
 
 ## Type of Change
+
 - [ ] New feature
 - [ ] Enhancement
 - [ ] Refactoring
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] E2E tests added/updated (if applicable)
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -145,34 +155,43 @@ Brief description of the feature
 - [ ] Security implications reviewed
 
 ## Related Issues
+
 Closes #(issue number)
 
 ## Screenshots (if applicable)
+
 <!-- Add screenshots for UI changes -->
 ```
 
 ### Bug Fix Pull Request Template
+
 ```markdown
 ## Description
+
 Brief description of the bug fix
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] Hotfix
 
 ## Root Cause Analysis
+
 <!-- Describe the root cause of the issue -->
 
 ## Solution
+
 <!-- Describe how the issue was resolved -->
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] Regression tests added
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Root cause identified
 - [ ] Solution properly tested
 - [ ] No regression introduced
@@ -180,15 +199,18 @@ Brief description of the bug fix
 - [ ] Performance impact assessed
 
 ## Related Issues
+
 Fixes #(issue number)
 
 ## Additional Notes
+
 <!-- Any additional information -->
 ```
 
 ## Branch Naming Rules
 
 ### Allowed Patterns
+
 - `feature/*` - Feature branches
 - `bugfix/*` - Bug fix branches
 - `hotfix/*` - Hotfix branches
@@ -196,6 +218,7 @@ Fixes #(issue number)
 - `docs/*` - Documentation branches
 
 ### Prohibited Patterns
+
 - `main` - Reserved for production
 - `develop` - Reserved for integration
 - `feature/2.2` - Reserved for current active feature branch
@@ -205,11 +228,13 @@ Fixes #(issue number)
 ## Merge Restrictions
 
 ### Merge Methods
+
 - **Squash and Merge**: Default for feature branches
 - **Rebase and Merge**: For bug fixes
 - **Merge Commit**: For release branches
 
 ### Merge Requirements
+
 - All status checks must pass
 - Required approvals received
 - No merge conflicts
@@ -219,6 +244,7 @@ Fixes #(issue number)
 ## Emergency Procedures
 
 ### Critical Hotfix Process
+
 1. Create hotfix branch from `main`
 2. Implement minimal fix with tests
 3. Create emergency pull request
@@ -228,6 +254,7 @@ Fixes #(issue number)
 7. Post-incident review
 
 ### Emergency Override
+
 - Only available to administrators
 - Requires security team approval
 - Must be documented and reviewed
@@ -236,6 +263,7 @@ Fixes #(issue number)
 ## Monitoring and Alerts
 
 ### Branch Health Monitoring
+
 - Stale branches (> 7 days)
 - Failed status checks
 - Merge conflicts
@@ -243,6 +271,7 @@ Fixes #(issue number)
 - Performance regressions
 
 ### Automated Actions
+
 - Auto-delete merged branches
 - Auto-close stale pull requests
 - Auto-assign reviewers
@@ -251,12 +280,14 @@ Fixes #(issue number)
 ## Compliance and Auditing
 
 ### Audit Requirements
+
 - Monthly branch protection compliance review
 - Quarterly process effectiveness assessment
 - Annual security and compliance audit
 - Continuous improvement implementation
 
 ### Reporting
+
 - Branch management metrics
 - Merge success rates
 - Review turnaround times

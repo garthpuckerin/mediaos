@@ -115,6 +115,7 @@ Thumbs.db
 
 # MediaOS specific
 /config/
+!config/README.md
 /downloads/
 /media/
 artifacts/
@@ -131,6 +132,8 @@ playwright/.cache/
 # Backup files
 *.backup
 *.bak
+*.old
+*.zip
 
 # Lock files (keep package-lock.json for npm, but ignore others)
 yarn.lock
@@ -139,3 +142,4 @@ pnpm-lock.yaml
 # Local development
 .local/
 dev-config/
+.claude/settings.local.json

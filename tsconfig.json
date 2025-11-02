@@ -9,11 +9,6 @@
     "allowJs": true,
     "checkJs": false,
     "jsx": "react-jsx",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
     "removeComments": false,
     "strict": true,
     "noImplicitAny": true,
@@ -36,23 +31,9 @@
       "@mediaos/web": ["packages/web/src"],
       "@mediaos/workers": ["packages/workers/src"],
       "@mediaos/adapters": ["packages/adapters/src"]
-    }
+    },
+    "noEmit": true
   },
-  "include": [
-    "packages/*/src/**/*",
-    "test/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
-  "references": [
-    { "path": "./packages/api" },
-    { "path": "./packages/web" },
-    { "path": "./packages/workers" },
-    { "path": "./packages/adapters" }
-  ]
+  "include": ["packages/*/src/**/*", "packages/*/test/**/*", "test/**/*"],
+  "exclude": ["node_modules", "dist", "coverage"]
 }

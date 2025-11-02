@@ -13,12 +13,14 @@ This document establishes comprehensive guardrails and working agreements for AI
 ### 1.1 Problem Analysis Protocol
 
 **MANDATORY APPROACH:**
+
 - **Root Cause First**: Always identify underlying causes before implementing solutions
 - **Evidence-Based Analysis**: Gather concrete evidence, not assumptions
 - **Systematic Investigation**: Use structured analysis frameworks
 - **Impact Assessment**: Evaluate scope and dependencies
 
 **PROHIBITED ACTIONS:**
+
 - Implementing quick fixes without root cause analysis
 - Making assumptions about system behavior
 - Skipping verification steps
@@ -27,12 +29,14 @@ This document establishes comprehensive guardrails and working agreements for AI
 ### 1.2 Solution Design Standards
 
 **REQUIRED ELEMENTS:**
+
 - **Best Practices Reference**: Always cite industry standards and proven methodologies
 - **Comprehensive Planning**: Consider all aspects, dependencies, and edge cases
 - **Risk Assessment**: Identify potential impacts and mitigation strategies
 - **Verification Strategy**: Define how solutions will be tested and validated
 
 **QUALITY GATES:**
+
 - Solutions must be thoroughly planned before implementation
 - All dependencies must be identified and addressed
 - Testing strategies must be defined upfront
@@ -41,6 +45,7 @@ This document establishes comprehensive guardrails and working agreements for AI
 ### 1.3 Implementation Protocol
 
 **MANDATORY STEPS:**
+
 1. **Direct Method Selection**: Use the most reliable tools available
 2. **Systematic Implementation**: Follow planned approach step-by-step
 3. **Continuous Verification**: Test at each step
@@ -48,6 +53,7 @@ This document establishes comprehensive guardrails and working agreements for AI
 5. **Validation**: Verify solution works as intended
 
 **PROHIBITED SHORTCUTS:**
+
 - Skipping verification steps
 - Using unreliable information sources
 - Implementing without proper testing
@@ -58,18 +64,21 @@ This document establishes comprehensive guardrails and working agreements for AI
 ### 2.1 Date and Time Handling
 
 **MANDATORY PROTOCOL:**
+
 - **Primary Source**: Always use system commands (`date`, `Get-Date`, etc.)
 - **Verification**: Cross-reference with multiple reliable sources when needed
 - **Documentation**: Include date/time stamps in all relevant documentation
 - **Consistency**: Ensure all references use the same date/time
 
 **PROHIBITED ACTIONS:**
+
 - Using web search as primary source for current date/time
 - Making assumptions about dates
 - Using outdated date references
 - Inconsistent date formatting across documents
 
 **IMPLEMENTATION:**
+
 ```bash
 # Always use system commands for current date/time
 date                    # Unix/Linux/macOS
@@ -80,12 +89,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 2.2 Technical Information Verification
 
 **REQUIRED VERIFICATION:**
+
 - **Source Validation**: Verify information from authoritative sources
 - **Version Checking**: Confirm current versions of tools and dependencies
 - **Compatibility Analysis**: Ensure compatibility between components
 - **Documentation Cross-Reference**: Verify against official documentation
 
 **PROHIBITED ACTIONS:**
+
 - Using outdated technical information
 - Assuming compatibility without verification
 - Implementing based on unverified sources
@@ -96,12 +107,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 3.1 Documentation Sync Requirements
 
 **MANDATORY PROTOCOL:**
+
 - **Code-Documentation Parity**: All code changes must include corresponding documentation updates
 - **Real-Time Updates**: Documentation must be updated simultaneously with code changes
 - **Version Synchronization**: Documentation versions must match code versions
 - **Cross-Reference Validation**: All internal documentation links must be verified
 
 **REQUIRED DOCUMENTATION UPDATES:**
+
 - **API Changes**: Update API documentation, OpenAPI specs, and endpoint descriptions
 - **Architecture Changes**: Update ARCHITECTURE.md for any structural modifications
 - **Process Changes**: Update CONTRIBUTING.md, DEVELOPMENT.md for workflow modifications
@@ -109,6 +122,7 @@ node -e "console.log(new Date())"  # Cross-platform
 - **Configuration Changes**: Update environment and deployment documentation
 
 **PROHIBITED ACTIONS:**
+
 - Committing code without updating relevant documentation
 - Leaving outdated documentation in the repository
 - Creating documentation that doesn't match actual implementation
@@ -117,12 +131,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 3.2 Documentation Quality Gates
 
 **MANDATORY QUALITY CHECKS:**
+
 - **Accuracy Verification**: All documentation must be tested against actual implementation
 - **Completeness Check**: All new features must have complete documentation
 - **Consistency Validation**: Documentation must be consistent across all files
 - **Link Verification**: All internal and external links must be functional
 
 **DOCUMENTATION TESTING:**
+
 - **Implementation Testing**: Follow documentation steps to verify accuracy
 - **Cross-Platform Testing**: Verify documentation works across different environments
 - **User Testing**: Validate documentation clarity and usability
@@ -131,6 +147,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 3.3 Documentation Maintenance Protocol
 
 **SYSTEMATIC MAINTENANCE:**
+
 1. **Change Detection**: Identify all documentation affected by code changes
 2. **Impact Analysis**: Assess scope of documentation updates needed
 3. **Update Planning**: Plan comprehensive documentation updates
@@ -139,6 +156,7 @@ node -e "console.log(new Date())"  # Cross-platform
 6. **Review**: Conduct thorough documentation review
 
 **MAINTENANCE SCHEDULE:**
+
 - **Real-Time**: Documentation updated with every code change
 - **Weekly**: Review documentation for accuracy and completeness
 - **Monthly**: Comprehensive documentation audit
@@ -147,12 +165,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 3.4 Documentation Version Control
 
 **VERSION SYNCHRONIZATION:**
+
 - **Documentation Versions**: Must match code versions exactly
 - **Changelog Updates**: All changes must be reflected in CHANGELOG.md
 - **Version Tags**: Documentation must be tagged with code releases
 - **Backward Compatibility**: Document breaking changes clearly
 
 **VERSION CONTROL PROTOCOL:**
+
 - **Branch Synchronization**: Documentation branches must match code branches
 - **Merge Requirements**: Documentation updates required for all merges
 - **Release Process**: Documentation must be included in release process
@@ -163,6 +183,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 4.1 Code Quality Requirements
 
 **MANDATORY STANDARDS:**
+
 - **TypeScript Strict Mode**: All code must use strict TypeScript configuration
 - **Test Coverage**: Minimum 80% test coverage required
 - **Linting Compliance**: All code must pass ESLint without warnings
@@ -170,6 +191,7 @@ node -e "console.log(new Date())"  # Cross-platform
 - **Error Handling**: Comprehensive error handling required
 
 **QUALITY GATES:**
+
 - Code must pass all linting checks
 - Tests must pass with required coverage
 - TypeScript compilation must succeed without errors
@@ -178,12 +200,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 4.2 Testing Protocol
 
 **REQUIRED TESTING:**
+
 - **Unit Tests**: All functions and components must have unit tests
 - **Integration Tests**: API endpoints must have integration tests
 - **E2E Tests**: Critical user workflows must have E2E tests
 - **Performance Tests**: Performance-critical components must be tested
 
 **TESTING STANDARDS:**
+
 - Tests must be deterministic and repeatable
 - Tests must cover edge cases and error conditions
 - Tests must be maintainable and well-documented
@@ -192,12 +216,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 4.3 Documentation Requirements
 
 **MANDATORY DOCUMENTATION:**
+
 - **API Documentation**: All endpoints must be documented
 - **Architecture Documentation**: System design must be documented
 - **Deployment Documentation**: Deployment procedures must be documented
 - **Contributing Guidelines**: Development process must be documented
 
 **DOCUMENTATION STANDARDS:**
+
 - Documentation must be accurate and up-to-date
 - Documentation must be comprehensive and clear
 - Documentation must include examples and use cases
@@ -206,6 +232,7 @@ node -e "console.log(new Date())"  # Cross-platform
 - Documentation must be tested for accuracy
 
 **DOCUMENTATION SYNCHRONIZATION ENFORCEMENT:**
+
 - **Pre-commit Hooks**: Documentation updates required before code commits
 - **Pull Request Gates**: Documentation updates must be included in all PRs
 - **CI/CD Integration**: Documentation accuracy checks in build pipeline
@@ -218,12 +245,14 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 5.1 Security Standards
 
 **MANDATORY SECURITY:**
+
 - **Input Validation**: All inputs must be validated
 - **Authentication**: Proper authentication mechanisms required
 - **Authorization**: Role-based access control required
 - **Data Protection**: Sensitive data must be protected
 
 **SECURITY PROTOCOLS:**
+
 - Security reviews required for all changes
 - Vulnerability scanning must be performed
 - Security best practices must be followed
@@ -232,6 +261,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 5.2 Compliance Requirements
 
 **REQUIRED COMPLIANCE:**
+
 - **License Compliance**: All dependencies must be properly licensed
 - **Privacy Compliance**: Privacy requirements must be met
 - **Accessibility**: Applications must be accessible
@@ -242,6 +272,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 6.1 Decision Documentation
 
 **REQUIRED DOCUMENTATION:**
+
 - **Rationale**: All decisions must include clear rationale
 - **Alternatives**: Alternative approaches must be considered
 - **Impact**: Impact analysis must be documented
@@ -250,6 +281,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 6.2 Progress Reporting
 
 **MANDATORY REPORTING:**
+
 - **Status Updates**: Regular status updates required
 - **Issue Tracking**: All issues must be tracked and documented
 - **Milestone Reporting**: Milestone progress must be reported
@@ -260,6 +292,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 7.1 Error Prevention
 
 **PREVENTION STRATEGIES:**
+
 - **Input Validation**: Validate all inputs
 - **Boundary Checking**: Check array bounds and limits
 - **Resource Management**: Proper resource cleanup
@@ -268,6 +301,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 7.2 Error Recovery
 
 **RECOVERY PROTOCOLS:**
+
 - **Graceful Degradation**: Systems must degrade gracefully
 - **Error Logging**: All errors must be logged
 - **Recovery Procedures**: Recovery procedures must be documented
@@ -278,6 +312,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 8.1 Performance Requirements
 
 **MANDATORY PERFORMANCE:**
+
 - **Response Time**: API responses must be under 200ms
 - **Memory Usage**: Memory usage must be optimized
 - **CPU Usage**: CPU usage must be efficient
@@ -286,6 +321,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 8.2 Performance Monitoring
 
 **REQUIRED MONITORING:**
+
 - **Performance Metrics**: Key metrics must be monitored
 - **Performance Alerts**: Performance alerts must be configured
 - **Performance Testing**: Performance tests must be automated
@@ -296,6 +332,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 9.1 Maintenance Standards
 
 **REQUIRED MAINTENANCE:**
+
 - **Regular Updates**: Dependencies must be updated regularly
 - **Security Patches**: Security patches must be applied promptly
 - **Performance Optimization**: Performance must be continuously optimized
@@ -304,6 +341,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 9.2 Support Protocols
 
 **SUPPORT REQUIREMENTS:**
+
 - **Issue Tracking**: All issues must be tracked
 - **Response Times**: Response times must be defined
 - **Escalation Procedures**: Escalation procedures must be documented
@@ -314,6 +352,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 10.1 Quality Gates
 
 **MANDATORY QUALITY GATES:**
+
 - **Code Review**: All code must be reviewed
 - **Testing**: All code must be tested
 - **Documentation**: All code must be documented
@@ -322,6 +361,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 10.2 Quality Metrics
 
 **REQUIRED METRICS:**
+
 - **Test Coverage**: Minimum 80% test coverage
 - **Code Quality**: ESLint compliance required
 - **Performance**: Performance benchmarks must be met
@@ -332,6 +372,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 11.1 Process Improvement
 
 **IMPROVEMENT REQUIREMENTS:**
+
 - **Process Review**: Processes must be reviewed regularly
 - **Process Optimization**: Processes must be optimized
 - **Best Practice Adoption**: Best practices must be adopted
@@ -340,6 +381,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 11.2 Learning and Development
 
 **LEARNING REQUIREMENTS:**
+
 - **Technology Updates**: Technology knowledge must be current
 - **Best Practice Learning**: Best practices must be learned
 - **Skill Development**: Skills must be developed continuously
@@ -350,6 +392,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 12.1 Compliance Monitoring
 
 **MONITORING REQUIREMENTS:**
+
 - **Regular Audits**: Regular compliance audits required
 - **Compliance Reporting**: Compliance status must be reported
 - **Non-Compliance Handling**: Non-compliance must be addressed
@@ -358,6 +401,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 12.2 Enforcement Actions
 
 **ENFORCEMENT PROTOCOLS:**
+
 - **Warning System**: Warning system for minor violations
 - **Escalation Procedures**: Escalation for major violations
 - **Corrective Actions**: Corrective actions must be taken
@@ -368,6 +412,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 13.1 Emergency Response
 
 **EMERGENCY PROTOCOLS:**
+
 - **Emergency Contacts**: Emergency contacts must be maintained
 - **Emergency Procedures**: Emergency procedures must be documented
 - **Emergency Testing**: Emergency procedures must be tested
@@ -376,6 +421,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ### 13.2 Disaster Recovery
 
 **RECOVERY REQUIREMENTS:**
+
 - **Backup Procedures**: Backup procedures must be implemented
 - **Recovery Testing**: Recovery procedures must be tested
 - **Recovery Documentation**: Recovery procedures must be documented
@@ -386,6 +432,7 @@ node -e "console.log(new Date())"  # Cross-platform
 ## Implementation Checklist
 
 ### Initial Setup
+
 - [ ] Review and understand all guardrails
 - [ ] Establish compliance monitoring
 - [ ] Set up quality gates
@@ -397,6 +444,7 @@ node -e "console.log(new Date())"  # Cross-platform
 - [ ] **Establish documentation review processes**
 
 ### Ongoing Compliance
+
 - [ ] Regular compliance audits
 - [ ] Continuous process improvement
 - [ ] Regular training and development
@@ -408,6 +456,7 @@ node -e "console.log(new Date())"  # Cross-platform
 - [ ] **Real-time documentation synchronization monitoring**
 
 ### Emergency Preparedness
+
 - [ ] Emergency procedures documented
 - [ ] Emergency contacts maintained
 - [ ] Disaster recovery procedures tested

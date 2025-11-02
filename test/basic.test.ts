@@ -6,6 +6,6 @@ describe('MediaOS Basic Tests', () => {
   });
 
   it('should have proper environment setup', () => {
-    expect(process.env.NODE_ENV).toBeDefined();
+    expect(process.env['NODE_ENV']).toBeDefined();
   });
 });
