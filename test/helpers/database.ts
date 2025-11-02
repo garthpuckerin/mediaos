@@ -1,10 +1,16 @@
-import { promisify } from 'util';
-
 import { Database } from 'sqlite3';
 
 export async function setupTestDatabase(): Promise<void> {
   const db = new Database(':memory:');
-  const run = promisify(db.run.bind(db));
+
+  const run = (sql: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      db.run(sql, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+  };
 
   // Create test tables
   await run(`

@@ -35,11 +35,5 @@
     "noEmit": true
   },
   "include": ["packages/*/src/**/*", "packages/*/test/**/*", "test/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "coverage",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ]
+  "exclude": ["node_modules", "dist", "coverage"]
 }

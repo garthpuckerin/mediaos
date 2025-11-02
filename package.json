@@ -1,7 +1,7 @@
 {
   "name": "mediaos",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Unified media management platform replacing the arr ecosystem",
   "keywords": [
     "media",
@@ -61,7 +61,7 @@
     "@types/node": "^20.10.5",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
-    "@vitest/coverage-v8": "^1.1.0",
+    "@vitest/coverage-v8": "^4.0.5",
     "concurrently": "^8.2.2",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
@@ -75,7 +75,7 @@
     "prettier": "^3.1.1",
     "rimraf": "^5.0.5",
     "typescript": "^5.6.3",
-    "vitest": "^1.1.0"
+    "vitest": "^4.0.5"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

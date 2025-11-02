@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
@@ -23,8 +24,9 @@ import verifyJobsRoutes from './routes/verifyJobs';
 import verifySettingsRoutes from './routes/verifySettings';
 import wantedRoutes from './routes/wanted';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root directory
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 // Create Fastify instance
 const app = Fastify({
