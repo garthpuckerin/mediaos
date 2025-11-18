@@ -13,13 +13,21 @@ import {
   sanitizeUser,
   findUserById,
 } from '../services/userStore';
+import { rateLimits } from '../middleware/rateLimits';
 
 const plugin: FastifyPluginAsync = async (app) => {
   /**
    * POST /api/auth/register
    * Register a new user account
    */
-  app.post('/api/auth/register', async (req, reply) => {
+  app.post(
+    '/api/auth/register',
+    {
+      config: {
+        rateLimit: rateLimits.auth,
+      },
+    },
+    async (req, reply) => {
     const body = (req.body || {}) as any;
     const email = String(body.email || '').trim();
     const password = String(body.password || '');
@@ -75,7 +83,14 @@ const plugin: FastifyPluginAsync = async (app) => {
    * POST /api/auth/login
    * Authenticate and get tokens
    */
-  app.post('/api/auth/login', async (req, reply) => {
+  app.post(
+    '/api/auth/login',
+    {
+      config: {
+        rateLimit: rateLimits.auth,
+      },
+    },
+    async (req, reply) => {
     const body = (req.body || {}) as any;
     const email = String(body.email || '').trim();
     const password = String(body.password || '');

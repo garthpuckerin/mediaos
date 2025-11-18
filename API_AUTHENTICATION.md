@@ -179,6 +179,102 @@ User authenticated but lacks required permissions:
 }
 ```
 
+## Rate Limiting
+
+MediaOS API implements rate limiting to protect against abuse and ensure fair usage. Rate limits vary by endpoint type:
+
+### Global Limit
+- **Default**: 100 requests per 60 seconds
+- **Applies to**: All endpoints unless overridden
+
+### Authentication Endpoints
+
+**More restrictive to prevent brute force attacks:**
+- **Limit**: 5 requests per 15 minutes
+- **Applies to**:
+  - `POST /api/auth/register`
+  - `POST /api/auth/login`
+- **429 Response**:
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Too many authentication attempts. Please try again in 15 minutes."
+}
+```
+
+### Download Operations
+
+**Moderate limits to prevent queue flooding:**
+- **Limit**: 20 requests per minute
+- **Applies to**:
+  - `POST /api/downloads/grab`
+- **429 Response**:
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Too many download requests. Please wait a moment."
+}
+```
+
+### Expensive Operations
+
+**Restrictive limits due to computational cost:**
+- **Limit**: 10 requests per minute
+- **Applies to**:
+  - `POST /api/wanted/scan`
+  - `POST /api/indexers/search`
+- **429 Response**:
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded for expensive operations. Please wait."
+}
+```
+
+### Handling Rate Limits
+
+When you receive a 429 response:
+
+1. **Implement exponential backoff** in your client
+2. **Cache responses** when appropriate
+3. **Batch operations** instead of making individual requests
+4. **Monitor usage** to stay within limits
+
+Example retry logic:
+
+```typescript
+async function requestWithRetry(url: string, options: RequestInit, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(url, options);
+
+    if (response.status === 429) {
+      const delay = Math.pow(2, i) * 1000; // Exponential backoff: 1s, 2s, 4s
+      await new Promise(resolve => setTimeout(resolve, delay));
+      continue;
+    }
+
+    return response;
+  }
+
+  throw new Error('Max retries exceeded');
+}
+```
+
+### Configuration
+
+Rate limits can be configured via environment variables:
+
+```bash
+# Global rate limit (requests per window)
+RATE_LIMIT_MAX=100
+
+# Time window in milliseconds (default: 60000 = 1 minute)
+RATE_LIMIT_WINDOW=60000
+```
+
 ## Security Best Practices
 
 1. **Use HTTPS**: Always use HTTPS in production to protect tokens in transit

@@ -10,6 +10,7 @@ import {
 import type { FastifyPluginAsync } from 'fastify';
 
 import { authenticate } from '../middleware/auth';
+import { rateLimits } from '../middleware/rateLimits';
 import { loadGrabs, saveGrab } from '../services/grabStore';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
@@ -69,7 +70,12 @@ const plugin: FastifyPluginAsync = async (app) => {
   );
   app.post(
     '/api/downloads/grab',
-    { preHandler: authenticate },
+    {
+      preHandler: authenticate,
+      config: {
+        rateLimit: rateLimits.downloads,
+      },
+    },
     async (req) => {
     const rawBody = (req.body || {}) as any;
     const kind = String(unwrapField(rawBody.kind) || '');

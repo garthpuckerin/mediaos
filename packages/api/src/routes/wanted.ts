@@ -4,6 +4,7 @@ import path from 'path';
 import type { FastifyPluginAsync } from 'fastify';
 
 import { authenticate } from '../middleware/auth';
+import { rateLimits } from '../middleware/rateLimits';
 
 type WantedItem = {
   id: string;
@@ -74,7 +75,12 @@ const plugin: FastifyPluginAsync = async (app) => {
 
   app.post(
     '/scan',
-    { preHandler: authenticate },
+    {
+      preHandler: authenticate,
+      config: {
+        rateLimit: rateLimits.expensive,
+      },
+    },
     async (req) => {
     const b = (req.body || {}) as any;
     const enqueue = !!b.enqueue;
