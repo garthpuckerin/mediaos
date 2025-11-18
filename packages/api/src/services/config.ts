@@ -17,6 +17,7 @@ const configSchema = z.object({
 
   // Security
   JWT_SECRET: z.string().min(32).optional(),
+  ENCRYPTION_KEY: z.string().min(32).optional(),
   ALLOWED_ORIGINS: z
     .string()
     .default('*')
@@ -188,6 +189,11 @@ export function validateConfigWithWarnings(): Config {
     if (!config.JWT_SECRET) {
       console.warn(
         '⚠️  JWT_SECRET not set - authentication features will be disabled'
+      );
+    }
+    if (!config.ENCRYPTION_KEY) {
+      console.warn(
+        '⚠️  ENCRYPTION_KEY not set - credentials will be stored in plain text (SECURITY RISK!)'
       );
     }
     if (config.ALLOWED_ORIGINS.includes('*')) {

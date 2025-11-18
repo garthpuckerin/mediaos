@@ -24,6 +24,7 @@ import verifyJobsRoutes from './routes/verifyJobs';
 import verifySettingsRoutes from './routes/verifySettings';
 import wantedRoutes from './routes/wanted';
 import { validateConfigWithWarnings } from './services/config';
+import { loadDownloadersWithCredentials } from './routes/settings';
 
 // Load environment variables from root directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -267,14 +268,7 @@ try {
     const DL_FILE = path.join(CONFIG_DIR, 'downloaders.json');
     const MON_FILE = path.join(CONFIG_DIR, 'monitor.json');
 
-    const loadDownloaders = async (): Promise<any> => {
-      try {
-        const raw = await fs.readFile(DL_FILE, 'utf8');
-        return JSON.parse(raw) || {};
-      } catch {
-        return {};
-      }
-    };
+    // Use loadDownloadersWithCredentials from settings module (includes decryption)
     const ensureDir = async (f: string) => {
       try {
         await fs.mkdir(path.dirname(f), { recursive: true });
@@ -308,7 +302,7 @@ try {
 
     const tick = async () => {
       try {
-        const cfg = await loadDownloaders();
+        const cfg = await loadDownloadersWithCredentials();
         const sab = cfg.sabnzbd || {};
         if (!sab.enabled || !sab.baseUrl || !sab.apiKey) return;
         const hist = await sabnzbd.history({
