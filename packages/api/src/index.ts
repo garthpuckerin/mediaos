@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import Fastify from 'fastify';
 
 import activityRoutes from './routes/activity';
+import authRoutes from './routes/auth';
 import calendarRoutes from './routes/calendar';
 import downloadsRoutes from './routes/downloads';
 import filesRoutes from './routes/files';
@@ -68,6 +69,10 @@ await app.register(cors, {
 });
 
 // Application routes
+// Auth routes (always public)
+await app.register(authRoutes);
+
+// Other routes (can be protected with middleware in future)
 await app.register(libraryRoutes);
 await app.register(filesRoutes);
 await app.register(indexersRoutes, { prefix: '/api/indexers' });
