@@ -18,38 +18,37 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: '8'
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Build application
-        run: pnpm build
+        run: npm run build
 
       - name: Run tests
-        run: pnpm test
+        run: npm test
+
+      - name: Create release tarball
+        run: |
+          mkdir -p release
+          tar -czf release/mediaos-${{ github.ref_name }}.tar.gz \
+            packages/api/dist \
+            packages/web/dist \
+            packages/workers/dist \
+            packages/adapters/dist \
+            package.json \
+            db
+
+      - name: Build Docker image
+        run: docker build -t mediaos:${{ github.ref_name }} .
 
       - name: Create Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: ncipollo/release-action@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          artifacts: "release/mediaos-${{ github.ref_name }}.tar.gz"
+          token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
-
-      - name: Upload Release Assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./packages/api/dist/
-          asset_name: mediaos-${{ github.ref_name }}.tar.gz
-          asset_content_type: application/gzip
+          generateReleaseNotes: true

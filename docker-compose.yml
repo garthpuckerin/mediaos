@@ -14,3 +14,17 @@ services:
       - /volume1/media/tv:/media/tv:ro
       - /volume1/media/music:/media/music:ro
       - /volume1/downloads:/downloads:rw
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s

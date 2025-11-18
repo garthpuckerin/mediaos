@@ -23,15 +23,19 @@ import verifyRoutes from './routes/verify';
 import verifyJobsRoutes from './routes/verifyJobs';
 import verifySettingsRoutes from './routes/verifySettings';
 import wantedRoutes from './routes/wanted';
+import { validateConfigWithWarnings } from './services/config';
 
 // Load environment variables from root directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
+// Validate configuration on startup
+const config = validateConfigWithWarnings();
+
 // Create Fastify instance
 const app = Fastify({
   logger: {
-    level: process.env['LOG_LEVEL'] || 'info',
+    level: config.LOG_LEVEL,
   },
 });
 
@@ -39,15 +43,15 @@ const app = Fastify({
 await app.register(sensible);
 await app.register(helmet);
 await app.register(rateLimit, {
-  max: Number(process.env['RATE_LIMIT_MAX'] || 100),
-  timeWindow: process.env['RATE_LIMIT_WINDOW'] || '1 minute',
+  max: config.RATE_LIMIT_MAX,
+  timeWindow: config.RATE_LIMIT_WINDOW,
 });
 
 // Multipart uploads (used for NZB uploads, artwork, etc.)
 await app.register(multipart, {
   attachFieldsToBody: true,
   limits: {
-    fileSize: Number(process.env['UPLOAD_MAX_BYTES'] || 5 * 1024 * 1024),
+    fileSize: config.UPLOAD_MAX_BYTES,
     files: 1,
   },
 });
@@ -55,8 +59,8 @@ await app.register(multipart, {
 // CORS configuration
 await app.register(cors, {
   origin:
-    process.env['NODE_ENV'] === 'production'
-      ? process.env['ALLOWED_ORIGINS']?.split(',') || false
+    config.NODE_ENV === 'production'
+      ? config.ALLOWED_ORIGINS
       : true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -82,8 +86,8 @@ app.get('/api/system/health', async (_request, _reply) => {
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    version: process.env['npm_package_version'] || '0.1.0',
-    environment: process.env['NODE_ENV'] || 'development',
+    version: process.env['npm_package_version'] || '0.3.0',
+    environment: config.NODE_ENV,
   };
 });
 
@@ -91,9 +95,9 @@ app.get('/api/system/health', async (_request, _reply) => {
 app.get('/api/system/info', async (_request, _reply) => {
   return {
     name: 'MediaOS',
-    version: process.env['npm_package_version'] || '0.1.0',
+    version: process.env['npm_package_version'] || '0.3.0',
     description: 'Unified media management platform',
-    environment: process.env['NODE_ENV'] || 'development',
+    environment: config.NODE_ENV,
     nodeVersion: process.version,
     platform: process.platform,
     arch: process.arch,
@@ -117,12 +121,11 @@ app.setErrorHandler(async (error, request, reply) => {
 });
 
 // Start server
-const port = Number(process.env['PORT'] || 3000);
-const host = process.env['HOST'] || '0.0.0.0';
+const host = '0.0.0.0';
 
 try {
-  await app.listen({ port, host });
-  app.log.info(`Server listening on http://${host}:${port}`);
+  await app.listen({ port: config.PORT, host });
+  app.log.info(`Server listening on http://${host}:${config.PORT}`);
 } catch (error) {
   console.error('Failed to start server:', error);
   process.exit(1);
