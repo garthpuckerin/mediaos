@@ -3,6 +3,7 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticate, requireAdmin } from '../middleware/auth';
 import { decrypt, encrypt, isEncrypted } from '../services/encryption';
 
 type DlCommon = { enabled: boolean; baseUrl?: string; timeoutMs?: number };
@@ -202,11 +203,20 @@ async function saveDownloaders(payload: Downloaders, existing?: any) {
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/api/settings/downloaders', async () => {
-    return await loadDownloaders();
-  });
+  // View downloader settings (requires authentication)
+  app.get(
+    '/api/settings/downloaders',
+    { preHandler: authenticate },
+    async () => {
+      return await loadDownloaders();
+    }
+  );
 
-  app.post('/api/settings/downloaders', async (req) => {
+  // Update downloader settings (admin only)
+  app.post(
+    '/api/settings/downloaders',
+    { preHandler: requireAdmin },
+    async (req) => {
     const body = (req.body || {}) as any;
     const qbIn: QB = {
       enabled: !!body?.qbittorrent?.enabled,
@@ -252,7 +262,11 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, downloaders: saved };
   });
 
-  app.post('/api/settings/downloaders/test', async (req) => {
+  // Test downloader connection (admin only)
+  app.post(
+    '/api/settings/downloaders/test',
+    { preHandler: requireAdmin },
+    async (req) => {
     const body = (req.body || {}) as any;
     const client = String(body.client || '').toLowerCase();
     const incoming = body.settings || {};

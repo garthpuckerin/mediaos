@@ -3,6 +3,8 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticate } from '../middleware/auth';
+
 type WantedItem = {
   id: string;
   title: string;
@@ -42,12 +44,19 @@ async function saveWanted(items: WantedItem[]) {
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/', async () => {
-    const items = await loadWanted();
-    return { ok: true, items };
-  });
+  app.get(
+    '/',
+    { preHandler: authenticate },
+    async () => {
+      const items = await loadWanted();
+      return { ok: true, items };
+    }
+  );
 
-  app.post('/', async (req) => {
+  app.post(
+    '/',
+    { preHandler: authenticate },
+    async (req) => {
     const b = (req.body || {}) as any;
     const id = String(b.id || '').trim();
     const title = String(b.title || '').trim();
@@ -56,13 +65,17 @@ const plugin: FastifyPluginAsync = async (app) => {
     const items = await loadWanted();
     const key = `${kind}:${id}`;
     const exists = items.find((x) => `${x.kind}:${x.id}` === key);
-    if (!exists)
-      items.push({ id, title, kind, addedAt: new Date().toISOString() });
-    await saveWanted(items);
-    return { ok: true, items };
-  });
+      if (!exists)
+        items.push({ id, title, kind, addedAt: new Date().toISOString() });
+      await saveWanted(items);
+      return { ok: true, items };
+    }
+  );
 
-  app.post('/scan', async (req) => {
+  app.post(
+    '/scan',
+    { preHandler: authenticate },
+    async (req) => {
     const b = (req.body || {}) as any;
     const enqueue = !!b.enqueue;
     const items = await loadWanted();
@@ -156,19 +169,24 @@ const plugin: FastifyPluginAsync = async (app) => {
         grabbed,
       });
     }
-    await saveWanted(items);
-    return { ok: true, scanned: items.length, results, scannedAt };
-  });
+      await saveWanted(items);
+      return { ok: true, scanned: items.length, results, scannedAt };
+    }
+  );
 
-  app.delete('/:kind/:id', async (req) => {
+  app.delete(
+    '/:kind/:id',
+    { preHandler: authenticate },
+    async (req) => {
     const params = (req.params || {}) as any;
     const id = String(params.id || '').trim();
     const kind = String(params.kind || '').trim();
-    const items = await loadWanted();
-    const next = items.filter((x) => !(x.id === id && x.kind === kind));
-    await saveWanted(next);
-    return { ok: true, items: next };
-  });
+      const items = await loadWanted();
+      const next = items.filter((x) => !(x.id === id && x.kind === kind));
+      await saveWanted(next);
+      return { ok: true, items: next };
+    }
+  );
 };
 
 export default plugin;

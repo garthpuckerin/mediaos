@@ -4,6 +4,8 @@ import path from 'path';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
+import { authenticate, requireAdmin } from '../middleware/auth';
+
 type Indexer = {
   id: string;
   name: string;
@@ -18,9 +20,16 @@ const indexers: Indexer[] = [
 ];
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/', async () => ({ indexers }));
+  app.get(
+    '/',
+    { preHandler: authenticate },
+    async () => ({ indexers })
+  );
 
-  app.post('/', async (req) => {
+  app.post(
+    '/',
+    { preHandler: requireAdmin },
+    async (req) => {
     const schema = z.object({
       name: z.string(),
       type: z.enum(['torrent', 'usenet']),
@@ -34,11 +43,15 @@ const plugin: FastifyPluginAsync = async (app) => {
       ...data,
       url: (data as any).url ?? undefined,
     } as Indexer;
-    indexers.push(ix);
-    return { ok: true, indexer: ix };
-  });
+      indexers.push(ix);
+      return { ok: true, indexer: ix };
+    }
+  );
 
-  app.post('/search', async (req) => {
+  app.post(
+    '/search',
+    { preHandler: authenticate },
+    async (req) => {
     const schema = z.object({
       q: z.string().min(2),
       cat: z.string().optional(),
@@ -195,10 +208,14 @@ const plugin: FastifyPluginAsync = async (app) => {
       });
     }
 
-    return { ok: true, results };
-  });
+      return { ok: true, results };
+    }
+  );
 
-  app.patch('/:id', async (req) => {
+  app.patch(
+    '/:id',
+    { preHandler: requireAdmin },
+    async (req) => {
     const id = (req.params as any).id as string;
     const schema = z.object({
       enabled: z.boolean().optional(),
@@ -209,18 +226,23 @@ const plugin: FastifyPluginAsync = async (app) => {
     const ix = indexers.find((x) => x.id === id);
     if (!ix) return { ok: false, error: 'not_found' };
     if (typeof data.enabled === 'boolean') ix.enabled = data.enabled;
-    if (typeof data.name === 'string') ix.name = data.name;
-    if (typeof data.url === 'string') (ix as any).url = data.url;
-    return { ok: true, indexer: ix };
-  });
+      if (typeof data.name === 'string') ix.name = data.name;
+      if (typeof data.url === 'string') (ix as any).url = data.url;
+      return { ok: true, indexer: ix };
+    }
+  );
 
-  app.delete('/:id', async (req) => {
+  app.delete(
+    '/:id',
+    { preHandler: requireAdmin },
+    async (req) => {
     const id = (req.params as any).id as string;
-    const idx = indexers.findIndex((x) => x.id === id);
-    if (idx === -1) return { ok: false, error: 'not_found' };
-    const [removed] = indexers.splice(idx, 1);
-    return { ok: true, indexer: removed };
-  });
+      const idx = indexers.findIndex((x) => x.id === id);
+      if (idx === -1) return { ok: false, error: 'not_found' };
+      const [removed] = indexers.splice(idx, 1);
+      return { ok: true, indexer: removed };
+    }
+  );
 };
 
 export default plugin;

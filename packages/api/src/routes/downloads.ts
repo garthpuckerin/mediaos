@@ -9,6 +9,7 @@ import {
 } from '@mediaos/adapters/src/downloaders';
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticate } from '../middleware/auth';
 import { loadGrabs, saveGrab } from '../services/grabStore';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
@@ -54,15 +55,22 @@ async function extractNzbUpload(body: any): Promise<{
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/api/downloads/last', async (req) => {
-    const q = (req.query || {}) as any;
-    const kind = String(q.kind || '');
-    const id = String(q.id || '');
-    if (!kind || !id) return { ok: false, error: 'missing_params' };
-    const map = await loadGrabs();
-    return { ok: true, last: map[`${kind}:${id}`] || null };
-  });
-  app.post('/api/downloads/grab', async (req) => {
+  app.get(
+    '/api/downloads/last',
+    { preHandler: authenticate },
+    async (req) => {
+      const q = (req.query || {}) as any;
+      const kind = String(q.kind || '');
+      const id = String(q.id || '');
+      if (!kind || !id) return { ok: false, error: 'missing_params' };
+      const map = await loadGrabs();
+      return { ok: true, last: map[`${kind}:${id}`] || null };
+    }
+  );
+  app.post(
+    '/api/downloads/grab',
+    { preHandler: authenticate },
+    async (req) => {
     const rawBody = (req.body || {}) as any;
     const kind = String(unwrapField(rawBody.kind) || '');
     const id = String(unwrapField(rawBody.id) || '');
@@ -245,7 +253,8 @@ const plugin: FastifyPluginAsync = async (app) => {
       app.log.error({ err: e, link, protocol }, 'GRAB_FAILED');
       return { ok: false, error: (e as Error).message };
     }
-  });
+    }
+  );
 };
 
 export default plugin;
