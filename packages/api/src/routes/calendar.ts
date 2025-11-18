@@ -3,8 +3,13 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticate } from '../middleware/auth';
+
 const calendarPlugin: FastifyPluginAsync = async (app) => {
-  app.get('/', async () => {
+  app.get(
+    '/',
+    { preHandler: authenticate },
+    async () => {
     const CONFIG_DIR = path.join(process.cwd(), 'config');
     const WANTED_FILE = path.join(CONFIG_DIR, 'wanted.json');
     try {
@@ -25,11 +30,12 @@ const calendarPlugin: FastifyPluginAsync = async (app) => {
           lastScan: it.lastScan || null,
         };
       });
-      return { events };
-    } catch {
-      return { events: [] };
+        return { events };
+      } catch {
+        return { events: [] };
+      }
     }
-  });
+  );
 };
 
 export default calendarPlugin;

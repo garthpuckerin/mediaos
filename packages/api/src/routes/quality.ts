@@ -3,6 +3,8 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticate, requireAdmin } from '../middleware/auth';
+
 type QualityProfile = { allowed: string[]; cutoff: string };
 type Profiles = { [kind: string]: QualityProfile };
 
@@ -28,18 +30,26 @@ async function loadProfiles(): Promise<Profiles> {
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/api/settings/quality', async () => {
-    const profiles = await loadProfiles();
-    return { ok: true, profiles };
-  });
+  app.get(
+    '/api/settings/quality',
+    { preHandler: authenticate },
+    async () => {
+      const profiles = await loadProfiles();
+      return { ok: true, profiles };
+    }
+  );
 
-  app.post('/api/settings/quality', async (req) => {
+  app.post(
+    '/api/settings/quality',
+    { preHandler: requireAdmin },
+    async (req) => {
     const body = (req.body || {}) as any;
     const profiles: Profiles = body?.profiles || {};
-    await ensureDir(QUALITY_FILE);
-    await fs.writeFile(QUALITY_FILE, JSON.stringify(profiles, null, 2), 'utf8');
-    return { ok: true, profiles };
-  });
+      await ensureDir(QUALITY_FILE);
+      await fs.writeFile(QUALITY_FILE, JSON.stringify(profiles, null, 2), 'utf8');
+      return { ok: true, profiles };
+    }
+  );
 };
 
 export default plugin;
