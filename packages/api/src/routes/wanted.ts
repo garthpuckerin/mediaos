@@ -3,6 +3,8 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { authenticate } from '../middleware/auth';
+
 type WantedItem = {
   id: string;
   title: string;
@@ -42,12 +44,12 @@ async function saveWanted(items: WantedItem[]) {
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/', async () => {
+  app.get('/', { preHandler: authenticate }, async () => {
     const items = await loadWanted();
     return { ok: true, items };
   });
 
-  app.post('/', async (req) => {
+  app.post('/', { preHandler: authenticate }, async (req) => {
     const b = (req.body || {}) as any;
     const id = String(b.id || '').trim();
     const title = String(b.title || '').trim();
@@ -62,7 +64,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, items };
   });
 
-  app.post('/scan', async (req) => {
+  app.post('/scan', { preHandler: authenticate }, async (req) => {
     const b = (req.body || {}) as any;
     const enqueue = !!b.enqueue;
     const items = await loadWanted();
@@ -160,7 +162,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, scanned: items.length, results, scannedAt };
   });
 
-  app.delete('/:kind/:id', async (req) => {
+  app.delete('/:kind/:id', { preHandler: authenticate }, async (req) => {
     const params = (req.params || {}) as any;
     const id = String(params.id || '').trim();
     const kind = String(params.kind || '').trim();
