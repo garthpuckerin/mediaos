@@ -27,15 +27,20 @@ export interface UserResponse {
   lastLoginAt?: string;
 }
 
-const CONFIG_DIR = path.join(process.cwd(), 'config');
-const USERS_FILE = path.join(CONFIG_DIR, 'users.json');
+function getConfigDir(): string {
+  return process.env.CONFIG_DIR || path.join(process.cwd(), 'config');
+}
+
+function getUsersFile(): string {
+  return path.join(getConfigDir(), 'users.json');
+}
 
 /**
  * Ensures the config directory exists
  */
 async function ensureDir() {
   try {
-    await fs.mkdir(CONFIG_DIR, { recursive: true });
+    await fs.mkdir(getConfigDir(), { recursive: true });
   } catch (_e) {
     // ignore
   }
@@ -46,7 +51,7 @@ async function ensureDir() {
  */
 async function loadUsers(): Promise<Record<string, User>> {
   try {
-    const raw = await fs.readFile(USERS_FILE, 'utf8');
+    const raw = await fs.readFile(getUsersFile(), 'utf8');
     return JSON.parse(raw) || {};
   } catch (_e) {
     return {};
@@ -58,7 +63,7 @@ async function loadUsers(): Promise<Record<string, User>> {
  */
 async function saveUsers(users: Record<string, User>): Promise<void> {
   await ensureDir();
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  await fs.writeFile(getUsersFile(), JSON.stringify(users, null, 2), 'utf8');
 }
 
 /**
