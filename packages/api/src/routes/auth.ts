@@ -13,100 +13,120 @@ import {
   sanitizeUser,
   findUserById,
 } from '../services/userStore';
+import { rateLimits } from '../middleware/rateLimits';
 
 const plugin: FastifyPluginAsync = async (app) => {
   /**
    * POST /api/auth/register
    * Register a new user account
    */
-  app.post('/api/auth/register', async (req, reply) => {
-    const body = (req.body || {}) as any;
-    const email = String(body.email || '').trim();
-    const password = String(body.password || '');
+  app.post(
+    '/api/auth/register',
+    {
+      config: {
+        rateLimit: rateLimits.auth,
+      },
+    },
+    async (req, reply) => {
+      const body = (req.body || {}) as any;
+      const email = String(body.email || '').trim();
+      const password = String(body.password || '');
 
-    // Validation
-    if (!email || !email.includes('@')) {
-      return reply.code(400).send({
-        ok: false,
-        error: 'Valid email is required',
-      });
-    }
-
-    if (!password || password.length < 8) {
-      return reply.code(400).send({
-        ok: false,
-        error: 'Password must be at least 8 characters',
-      });
-    }
-
-    try {
-      // Check if this is the first user (will be admin)
-      const usersExist = await hasUsers();
-      const user = usersExist
-        ? await createUser(email, password, 'user')
-        : await createFirstAdmin(email, password);
-
-      // Generate tokens
-      const tokens = generateTokenPair(user.id, user.email, user.role);
-
-      return {
-        ok: true,
-        user,
-        ...tokens,
-        isFirstUser: !usersExist,
-      };
-    } catch (error) {
-      if (error instanceof Error && error.message === 'Email already exists') {
-        return reply.code(409).send({
+      // Validation
+      if (!email || !email.includes('@')) {
+        return reply.code(400).send({
           ok: false,
-          error: 'Email already exists',
+          error: 'Valid email is required',
         });
       }
 
-      app.log.error({ err: error }, 'Registration error');
-      return reply.code(500).send({
-        ok: false,
-        error: 'Registration failed',
-      });
+      if (!password || password.length < 8) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Password must be at least 8 characters',
+        });
+      }
+
+      try {
+        // Check if this is the first user (will be admin)
+        const usersExist = await hasUsers();
+        const user = usersExist
+          ? await createUser(email, password, 'user')
+          : await createFirstAdmin(email, password);
+
+        // Generate tokens
+        const tokens = generateTokenPair(user.id, user.email, user.role);
+
+        return {
+          ok: true,
+          user,
+          ...tokens,
+          isFirstUser: !usersExist,
+        };
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          error.message === 'Email already exists'
+        ) {
+          return reply.code(409).send({
+            ok: false,
+            error: 'Email already exists',
+          });
+        }
+
+        app.log.error({ err: error }, 'Registration error');
+        return reply.code(500).send({
+          ok: false,
+          error: 'Registration failed',
+        });
+      }
     }
-  });
+  );
 
   /**
    * POST /api/auth/login
    * Authenticate and get tokens
    */
-  app.post('/api/auth/login', async (req, reply) => {
-    const body = (req.body || {}) as any;
-    const email = String(body.email || '').trim();
-    const password = String(body.password || '');
+  app.post(
+    '/api/auth/login',
+    {
+      config: {
+        rateLimit: rateLimits.auth,
+      },
+    },
+    async (req, reply) => {
+      const body = (req.body || {}) as any;
+      const email = String(body.email || '').trim();
+      const password = String(body.password || '');
 
-    if (!email || !password) {
-      return reply.code(400).send({
-        ok: false,
-        error: 'Email and password are required',
-      });
+      if (!email || !password) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Email and password are required',
+        });
+      }
+
+      try {
+        // Authenticate user
+        const user = await authenticateUser(email, password);
+
+        // Generate tokens
+        const tokens = generateTokenPair(user.id, user.email, user.role);
+
+        return {
+          ok: true,
+          user,
+          ...tokens,
+        };
+      } catch (error) {
+        // Don't reveal whether email exists
+        return reply.code(401).send({
+          ok: false,
+          error: 'Invalid credentials',
+        });
+      }
     }
-
-    try {
-      // Authenticate user
-      const user = await authenticateUser(email, password);
-
-      // Generate tokens
-      const tokens = generateTokenPair(user.id, user.email, user.role);
-
-      return {
-        ok: true,
-        user,
-        ...tokens,
-      };
-    } catch (error) {
-      // Don't reveal whether email exists
-      return reply.code(401).send({
-        ok: false,
-        error: 'Invalid credentials',
-      });
-    }
-  });
+  );
 
   /**
    * POST /api/auth/refresh

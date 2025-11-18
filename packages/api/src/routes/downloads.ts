@@ -10,6 +10,7 @@ import {
 import type { FastifyPluginAsync } from 'fastify';
 
 import { authenticate } from '../middleware/auth';
+import { rateLimits } from '../middleware/rateLimits';
 import { loadGrabs, saveGrab } from '../services/grabStore';
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
@@ -63,190 +64,218 @@ const plugin: FastifyPluginAsync = async (app) => {
     const map = await loadGrabs();
     return { ok: true, last: map[`${kind}:${id}`] || null };
   });
-  app.post('/api/downloads/grab', { preHandler: authenticate }, async (req) => {
-    const rawBody = (req.body || {}) as any;
-    const kind = String(unwrapField(rawBody.kind) || '');
-    const id = String(unwrapField(rawBody.id) || '');
-    const title = String(unwrapField(rawBody.title) || '');
-    const link = String(unwrapField(rawBody.link) || '');
-    const protocolRaw = String(
-      unwrapField(rawBody.protocol) || ''
-    ).toLowerCase();
-    const protocol = (
-      protocolRaw === 'usenet'
-        ? 'usenet'
-        : protocolRaw === 'torrent'
-          ? 'torrent'
-          : link.startsWith('magnet:')
+  app.post(
+    '/api/downloads/grab',
+    {
+      preHandler: authenticate,
+      config: {
+        rateLimit: rateLimits.downloads,
+      },
+    },
+    async (req) => {
+      const rawBody = (req.body || {}) as any;
+      const kind = String(unwrapField(rawBody.kind) || '');
+      const id = String(unwrapField(rawBody.id) || '');
+      const title = String(unwrapField(rawBody.title) || '');
+      const link = String(unwrapField(rawBody.link) || '');
+      const protocolRaw = String(
+        unwrapField(rawBody.protocol) || ''
+      ).toLowerCase();
+      const protocol = (
+        protocolRaw === 'usenet'
+          ? 'usenet'
+          : protocolRaw === 'torrent'
             ? 'torrent'
-            : 'usenet'
-    ) as 'torrent' | 'usenet';
+            : link.startsWith('magnet:')
+              ? 'torrent'
+              : 'usenet'
+      ) as 'torrent' | 'usenet';
 
-    const nzbUpload = await extractNzbUpload(rawBody);
+      const nzbUpload = await extractNzbUpload(rawBody);
 
-    if (!title) return { ok: false, error: 'missing_params' };
-    if (!link && !nzbUpload) return { ok: false, error: 'missing_link' };
+      if (!title) return { ok: false, error: 'missing_params' };
+      if (!link && !nzbUpload) return { ok: false, error: 'missing_link' };
 
-    const cfg = await loadDownloaderConfig();
-    // Dispatch minimal support: Torrent magnet via qBittorrent stub
-    try {
-      if (protocol === 'torrent' && link.startsWith('magnet:')) {
-        const qbc = cfg.qbittorrent || {};
-        if (!qbc.enabled || !qbc.baseUrl) {
-          app.log.warn(
-            { reason: 'qbittorrent_not_configured' },
-            'GRAB_UNSUPPORTED'
-          );
-          return { ok: false, error: 'qbittorrent_not_configured' };
-        }
-        const res = await qbittorrent.addMagnet(link, undefined, {
-          baseUrl: String(qbc.baseUrl),
-          username: qbc.username || undefined,
-          password: qbc.password || undefined,
-          timeoutMs:
-            typeof qbc.timeoutMs === 'number' ? qbc.timeoutMs : undefined,
-          category: qbc.category || undefined,
-        });
-        const ok = !!res.ok;
-        const saved = {
-          kind,
-          id,
-          title,
-          link,
-          protocol,
-          client: 'qbittorrent',
-          ok,
-          status: res.status,
-          at: new Date().toISOString(),
-        };
-        await saveGrab(`${kind}:${id}`, saved);
-        app.log.info({ kind, id, title, link, protocol, res }, 'GRAB_TORRENT');
-        return { ok, queued: ok };
-      }
-      if (protocol === 'usenet') {
-        const sab = cfg.sabnzbd || {};
-        if (
-          sab.enabled &&
-          sab.baseUrl &&
-          sab.apiKey &&
-          link &&
-          /^https?:\/\//i.test(link)
-        ) {
-          const res = await sabnzbd.addUrl(link, {
-            baseUrl: String(sab.baseUrl),
-            apiKey: String(sab.apiKey),
+      const cfg = await loadDownloaderConfig();
+      // Dispatch minimal support: Torrent magnet via qBittorrent stub
+      try {
+        if (protocol === 'torrent' && link.startsWith('magnet:')) {
+          const qbc = cfg.qbittorrent || {};
+          if (!qbc.enabled || !qbc.baseUrl) {
+            app.log.warn(
+              { reason: 'qbittorrent_not_configured' },
+              'GRAB_UNSUPPORTED'
+            );
+            return { ok: false, error: 'qbittorrent_not_configured' };
+          }
+          const res = await qbittorrent.addMagnet(link, undefined, {
+            baseUrl: String(qbc.baseUrl),
+            username: qbc.username || undefined,
+            password: qbc.password || undefined,
             timeoutMs:
-              typeof sab.timeoutMs === 'number' ? sab.timeoutMs : undefined,
-            category: sab.category || undefined,
+              typeof qbc.timeoutMs === 'number' ? qbc.timeoutMs : undefined,
+            category: qbc.category || undefined,
           });
           const ok = !!res.ok;
-          await saveGrab(`${kind}:${id}`, {
+          const saved = {
             kind,
             id,
             title,
             link,
             protocol,
-            client: 'sabnzbd',
+            client: 'qbittorrent',
             ok,
             status: res.status,
             at: new Date().toISOString(),
-            category: sab.category || undefined,
-          });
+          };
+          await saveGrab(`${kind}:${id}`, saved);
           app.log.info(
             { kind, id, title, link, protocol, res },
-            'GRAB_SABNZBD'
+            'GRAB_TORRENT'
           );
           return { ok, queued: ok };
         }
-        if (sab.enabled && sab.baseUrl && sab.apiKey && nzbUpload) {
-          const res = await sabnzbd.addFile(
-            {
-              base64: String(nzbUpload.base64 || ''),
-              ...(nzbUpload.filename && { filename: nzbUpload.filename }),
-              ...(nzbUpload.mimetype && { mimetype: nzbUpload.mimetype }),
-            },
-            {
+        if (protocol === 'usenet') {
+          const sab = cfg.sabnzbd || {};
+          if (
+            sab.enabled &&
+            sab.baseUrl &&
+            sab.apiKey &&
+            link &&
+            /^https?:\/\//i.test(link)
+          ) {
+            const res = await sabnzbd.addUrl(link, {
               baseUrl: String(sab.baseUrl),
               apiKey: String(sab.apiKey),
               timeoutMs:
                 typeof sab.timeoutMs === 'number' ? sab.timeoutMs : undefined,
               category: sab.category || undefined,
-            }
+            });
+            const ok = !!res.ok;
+            await saveGrab(`${kind}:${id}`, {
+              kind,
+              id,
+              title,
+              link,
+              protocol,
+              client: 'sabnzbd',
+              ok,
+              status: res.status,
+              at: new Date().toISOString(),
+              category: sab.category || undefined,
+            });
+            app.log.info(
+              { kind, id, title, link, protocol, res },
+              'GRAB_SABNZBD'
+            );
+            return { ok, queued: ok };
+          }
+          if (sab.enabled && sab.baseUrl && sab.apiKey && nzbUpload) {
+            const res = await sabnzbd.addFile(
+              {
+                base64: String(nzbUpload.base64 || ''),
+                ...(nzbUpload.filename && { filename: nzbUpload.filename }),
+                ...(nzbUpload.mimetype && { mimetype: nzbUpload.mimetype }),
+              },
+              {
+                baseUrl: String(sab.baseUrl),
+                apiKey: String(sab.apiKey),
+                timeoutMs:
+                  typeof sab.timeoutMs === 'number' ? sab.timeoutMs : undefined,
+                category: sab.category || undefined,
+              }
+            );
+            const ok = !!res.ok;
+            await saveGrab(`${kind}:${id}`, {
+              kind,
+              id,
+              title,
+              link: link || null,
+              protocol,
+              client: 'sabnzbd',
+              ok,
+              status: res.status ?? 'uploaded',
+              at: new Date().toISOString(),
+              category: sab.category || undefined,
+            });
+            app.log.info(
+              { kind, id, title, protocol, res },
+              'GRAB_SABNZBD_FILE'
+            );
+            return { ok, queued: ok };
+          }
+          const nzb = cfg.nzbget || {};
+          if (nzb.enabled && nzb.baseUrl) {
+            const res = await nzbget.addUrl(link, {
+              baseUrl: String(nzb.baseUrl),
+              username: nzb.username || undefined,
+              password: nzb.password || undefined,
+              timeoutMs:
+                typeof nzb.timeoutMs === 'number' ? nzb.timeoutMs : undefined,
+            });
+            const ok = !!res.ok;
+            await saveGrab(`${kind}:${id}`, {
+              kind,
+              id,
+              title,
+              link,
+              protocol,
+              client: 'nzbget',
+              ok,
+              status: res.status,
+              at: new Date().toISOString(),
+            });
+            app.log.info(
+              { kind, id, title, link, protocol, res },
+              'GRAB_NZBGET'
+            );
+            return { ok, queued: ok };
+          }
+          if (nzbUpload) {
+            await saveGrab(`${kind}:${id}`, {
+              kind,
+              id,
+              title,
+              link: link || null,
+              protocol,
+              client: sab.enabled
+                ? 'sabnzbd'
+                : nzb.enabled
+                  ? 'nzbget'
+                  : 'usenet',
+              ok: false,
+              status: 'stored',
+              at: new Date().toISOString(),
+              nzbUpload,
+              category: sab?.category || undefined,
+            });
+            app.log.info(
+              {
+                kind,
+                id,
+                title,
+                protocol,
+                nzbUpload: { size: nzbUpload.size },
+              },
+              'GRAB_NZB_STORED'
+            );
+            return { ok: true, queued: false, stored: true };
+          }
+          app.log.warn(
+            { reason: 'usenet_not_configured', hasUpload: !!nzbUpload },
+            'GRAB_UNSUPPORTED'
           );
-          const ok = !!res.ok;
-          await saveGrab(`${kind}:${id}`, {
-            kind,
-            id,
-            title,
-            link: link || null,
-            protocol,
-            client: 'sabnzbd',
-            ok,
-            status: res.status ?? 'uploaded',
-            at: new Date().toISOString(),
-            category: sab.category || undefined,
-          });
-          app.log.info({ kind, id, title, protocol, res }, 'GRAB_SABNZBD_FILE');
-          return { ok, queued: ok };
+          return { ok: false, error: 'usenet_not_configured' };
         }
-        const nzb = cfg.nzbget || {};
-        if (nzb.enabled && nzb.baseUrl) {
-          const res = await nzbget.addUrl(link, {
-            baseUrl: String(nzb.baseUrl),
-            username: nzb.username || undefined,
-            password: nzb.password || undefined,
-            timeoutMs:
-              typeof nzb.timeoutMs === 'number' ? nzb.timeoutMs : undefined,
-          });
-          const ok = !!res.ok;
-          await saveGrab(`${kind}:${id}`, {
-            kind,
-            id,
-            title,
-            link,
-            protocol,
-            client: 'nzbget',
-            ok,
-            status: res.status,
-            at: new Date().toISOString(),
-          });
-          app.log.info({ kind, id, title, link, protocol, res }, 'GRAB_NZBGET');
-          return { ok, queued: ok };
-        }
-        if (nzbUpload) {
-          await saveGrab(`${kind}:${id}`, {
-            kind,
-            id,
-            title,
-            link: link || null,
-            protocol,
-            client: sab.enabled ? 'sabnzbd' : nzb.enabled ? 'nzbget' : 'usenet',
-            ok: false,
-            status: 'stored',
-            at: new Date().toISOString(),
-            nzbUpload,
-            category: sab?.category || undefined,
-          });
-          app.log.info(
-            { kind, id, title, protocol, nzbUpload: { size: nzbUpload.size } },
-            'GRAB_NZB_STORED'
-          );
-          return { ok: true, queued: false, stored: true };
-        }
-        app.log.warn(
-          { reason: 'usenet_not_configured', hasUpload: !!nzbUpload },
-          'GRAB_UNSUPPORTED'
-        );
-        return { ok: false, error: 'usenet_not_configured' };
+        // Future: support NZB via SABnzbd/NZBGet and .torrent URLs
+        app.log.warn({ kind, id, title, link, protocol }, 'GRAB_UNSUPPORTED');
+        return { ok: false, error: 'unsupported_link_or_protocol' };
+      } catch (e) {
+        app.log.error({ err: e, link, protocol }, 'GRAB_FAILED');
+        return { ok: false, error: (e as Error).message };
       }
-      // Future: support NZB via SABnzbd/NZBGet and .torrent URLs
-      app.log.warn({ kind, id, title, link, protocol }, 'GRAB_UNSUPPORTED');
-      return { ok: false, error: 'unsupported_link_or_protocol' };
-    } catch (e) {
-      app.log.error({ err: e, link, protocol }, 'GRAB_FAILED');
-      return { ok: false, error: (e as Error).message };
     }
-  });
+  );
 };
 
 export default plugin;
