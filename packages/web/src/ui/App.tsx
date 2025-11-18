@@ -1,5 +1,8 @@
 ﻿import React, { useEffect, useState } from 'react';
 
+import { ProtectedRoute } from '../components/ProtectedRoute';
+import { UserMenu } from '../components/UserMenu';
+import { useApiClient } from '../api/client';
 import { ArtworkModal } from './ArtworkModal';
 
 const inputStyle: React.CSSProperties = {
