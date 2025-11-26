@@ -27,8 +27,13 @@ type Downloaders = {
   sabnzbd: SAB;
 };
 
-const CONFIG_DIR = path.join(process.cwd(), 'config');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'downloaders.json');
+function getConfigDir(): string {
+  return process.env['CONFIG_DIR'] || path.join(process.cwd(), 'config');
+}
+
+function getConfigFile(): string {
+  return path.join(getConfigDir(), 'downloaders.json');
+}
 
 async function ensureDir(filePath: string) {
   try {
@@ -38,39 +43,54 @@ async function ensureDir(filePath: string) {
   }
 }
 
-function isFiniteNumber(v: any): number | undefined {
+function isFiniteNumber(v: unknown): number | undefined {
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : undefined;
 }
 
-function normalize(obj: any): Downloaders {
+type PartialDownloaders = {
+  qbittorrent?: Partial<QB>;
+  nzbget?: Partial<NZB>;
+  sabnzbd?: Partial<SAB>;
+};
+
+function normalize(obj: unknown): Downloaders {
+  const input = obj as PartialDownloaders;
+
+  // qBittorrent: enabled if explicitly enabled OR if baseUrl is present
   const qb: QB = {
-    enabled: !!obj?.qbittorrent?.enabled,
-    baseUrl: obj?.qbittorrent?.baseUrl || undefined,
-    username: obj?.qbittorrent?.username || undefined,
-    hasPassword: !!obj?.qbittorrent?.password,
-    category: obj?.qbittorrent?.category || undefined,
+    enabled: !!input?.qbittorrent?.enabled || !!input?.qbittorrent?.baseUrl,
+    hasPassword: false,
   };
-  const qbT = isFiniteNumber(obj?.qbittorrent?.timeoutMs);
+  if (input?.qbittorrent?.baseUrl) qb.baseUrl = input.qbittorrent.baseUrl;
+  if (input?.qbittorrent?.username) qb.username = input.qbittorrent.username;
+  if (input?.qbittorrent?.category) qb.category = input.qbittorrent.category;
+  if ((input?.qbittorrent as Record<string, unknown>)?.['password'])
+    qb.hasPassword = true;
+  const qbT = isFiniteNumber(input?.qbittorrent?.timeoutMs);
   if (typeof qbT === 'number') qb.timeoutMs = qbT;
 
+  // NZBGet: enabled if explicitly enabled OR if baseUrl is present
   const nz: NZB = {
-    enabled: !!obj?.nzbget?.enabled,
-    baseUrl: obj?.nzbget?.baseUrl || undefined,
-    username: obj?.nzbget?.username || undefined,
-    hasPassword: !!obj?.nzbget?.password,
+    enabled: !!input?.nzbget?.enabled || !!input?.nzbget?.baseUrl,
+    hasPassword: false,
   };
-  const nzT = isFiniteNumber(obj?.nzbget?.timeoutMs);
+  if (input?.nzbget?.baseUrl) nz.baseUrl = input.nzbget.baseUrl;
+  if (input?.nzbget?.username) nz.username = input.nzbget.username;
+  if ((input?.nzbget as Record<string, unknown>)?.['password'])
+    nz.hasPassword = true;
+  const nzT = isFiniteNumber(input?.nzbget?.timeoutMs);
   if (typeof nzT === 'number') nz.timeoutMs = nzT;
 
+  // SABnzbd: enabled if explicitly enabled OR if baseUrl is present
   const sab: SAB = {
-    enabled: !!obj?.sabnzbd?.enabled,
-    baseUrl: obj?.sabnzbd?.baseUrl || undefined,
-    apiKey: obj?.sabnzbd?.apiKey || undefined,
-    hasApiKey: !!obj?.sabnzbd?.apiKey,
-    category: obj?.sabnzbd?.category || undefined,
+    enabled: !!input?.sabnzbd?.enabled || !!input?.sabnzbd?.baseUrl,
+    hasApiKey: !!(input?.sabnzbd as Record<string, unknown>)?.['apiKey'],
   };
-  const sabT = isFiniteNumber(obj?.sabnzbd?.timeoutMs);
+  if (input?.sabnzbd?.baseUrl) sab.baseUrl = input.sabnzbd.baseUrl;
+  // Note: Do NOT copy apiKey to response - sensitive data should not be exposed
+  if (input?.sabnzbd?.category) sab.category = input.sabnzbd.category;
+  const sabT = isFiniteNumber(input?.sabnzbd?.timeoutMs);
   if (typeof sabT === 'number') sab.timeoutMs = sabT;
 
   return { qbittorrent: qb, nzbget: nz, sabnzbd: sab };
@@ -78,7 +98,7 @@ function normalize(obj: any): Downloaders {
 
 async function loadDownloaders(): Promise<Downloaders> {
   try {
-    const raw = await fs.readFile(CONFIG_FILE, 'utf8');
+    const raw = await fs.readFile(getConfigFile(), 'utf8');
     const json = JSON.parse(raw);
     return normalize(json);
   } catch (_e) {
@@ -86,7 +106,16 @@ async function loadDownloaders(): Promise<Downloaders> {
   }
 }
 
-async function saveDownloaders(payload: Downloaders, existing?: any) {
+type SavedDownloaders = {
+  qbittorrent?: { password?: string };
+  nzbget?: { password?: string };
+  sabnzbd?: Record<string, unknown>;
+};
+
+async function saveDownloaders(
+  payload: Downloaders,
+  existing?: SavedDownloaders
+) {
   const toSave = {
     qbittorrent: {
       enabled: !!payload.qbittorrent.enabled,
@@ -117,9 +146,9 @@ async function saveDownloaders(payload: Downloaders, existing?: any) {
       timeoutMs: isFiniteNumber(payload.sabnzbd.timeoutMs),
       category: payload.sabnzbd.category || undefined,
     },
-  } as any;
-  await ensureDir(CONFIG_FILE);
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(toSave, null, 2), 'utf8');
+  };
+  await ensureDir(getConfigFile());
+  await fs.writeFile(getConfigFile(), JSON.stringify(toSave, null, 2), 'utf8');
   return normalize(toSave);
 }
 
@@ -129,33 +158,34 @@ const plugin: FastifyPluginAsync = async (app) => {
   });
 
   app.post('/api/settings/downloaders', async (req) => {
-    const body = (req.body || {}) as any;
-    const qbIn: QB = {
-      enabled: !!body?.qbittorrent?.enabled,
-      baseUrl: body?.qbittorrent?.baseUrl || undefined,
-      username: body?.qbittorrent?.username || undefined,
-      password: body?.qbittorrent?.password || undefined,
-      category: body?.qbittorrent?.category || undefined,
-    };
-    const qbInT = isFiniteNumber(body?.qbittorrent?.timeoutMs);
+    const body = (req.body || {}) as Record<string, unknown>;
+    const bodyQB = body['qbittorrent'] as Record<string, unknown> | undefined;
+    const bodyNZ = body['nzbget'] as Record<string, unknown> | undefined;
+    const bodySAB = body['sabnzbd'] as Record<string, unknown> | undefined;
+
+    const qbIn: QB = { enabled: !!bodyQB?.['enabled'], hasPassword: false };
+    if (bodyQB?.['baseUrl']) qbIn.baseUrl = String(bodyQB['baseUrl']);
+    if (bodyQB?.['username']) qbIn.username = String(bodyQB['username']);
+    if (bodyQB?.['password']) qbIn.password = String(bodyQB['password']);
+    if (bodyQB?.['category']) qbIn.category = String(bodyQB['category']);
+    const qbInT = isFiniteNumber(bodyQB?.['timeoutMs']);
     if (typeof qbInT === 'number') qbIn.timeoutMs = qbInT;
 
-    const nzIn: NZB = {
-      enabled: !!body?.nzbget?.enabled,
-      baseUrl: body?.nzbget?.baseUrl || undefined,
-      username: body?.nzbget?.username || undefined,
-      password: body?.nzbget?.password || undefined,
-    };
-    const nzInT = isFiniteNumber(body?.nzbget?.timeoutMs);
+    const nzIn: NZB = { enabled: !!bodyNZ?.['enabled'], hasPassword: false };
+    if (bodyNZ?.['baseUrl']) nzIn.baseUrl = String(bodyNZ['baseUrl']);
+    if (bodyNZ?.['username']) nzIn.username = String(bodyNZ['username']);
+    if (bodyNZ?.['password']) nzIn.password = String(bodyNZ['password']);
+    const nzInT = isFiniteNumber(bodyNZ?.['timeoutMs']);
     if (typeof nzInT === 'number') nzIn.timeoutMs = nzInT;
 
     const sabIn: SAB = {
-      enabled: !!body?.sabnzbd?.enabled,
-      baseUrl: body?.sabnzbd?.baseUrl || undefined,
-      apiKey: body?.sabnzbd?.apiKey || undefined,
-      category: body?.sabnzbd?.category || undefined,
+      enabled: !!bodySAB?.['enabled'],
+      hasApiKey: !!bodySAB?.['apiKey'],
     };
-    const sabInT = isFiniteNumber(body?.sabnzbd?.timeoutMs);
+    if (bodySAB?.['baseUrl']) sabIn.baseUrl = String(bodySAB['baseUrl']);
+    if (bodySAB?.['apiKey']) sabIn.apiKey = String(bodySAB['apiKey']);
+    if (bodySAB?.['category']) sabIn.category = String(bodySAB['category']);
+    const sabInT = isFiniteNumber(bodySAB?.['timeoutMs']);
     if (typeof sabInT === 'number') sabIn.timeoutMs = sabInT;
 
     const incoming: Downloaders = {
@@ -163,10 +193,10 @@ const plugin: FastifyPluginAsync = async (app) => {
       nzbget: nzIn,
       sabnzbd: sabIn,
     };
-    let existing: any = {};
+    let existing: SavedDownloaders = {};
     try {
-      const raw = await fs.readFile(CONFIG_FILE, 'utf8');
-      existing = JSON.parse(raw);
+      const raw = await fs.readFile(getConfigFile(), 'utf8');
+      existing = JSON.parse(raw) as SavedDownloaders;
     } catch (_e) {
       // ignore
     }
@@ -174,24 +204,25 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, downloaders: saved };
   });
 
-  app.post('/api/settings/downloaders/test', async (req) => {
-    const body = (req.body || {}) as any;
-    const client = String(body.client || '').toLowerCase();
-    const incoming = body.settings || {};
-    const saved = await loadDownloaders();
-    const cfg: any =
-      client === 'qbittorrent'
-        ? { ...saved.qbittorrent, ...incoming }
-        : client === 'nzbget'
-          ? { ...saved.nzbget, ...incoming }
-          : client === 'sabnzbd'
-            ? { ...saved.sabnzbd, ...incoming }
-            : null;
-    if (!cfg) return { ok: false, error: 'invalid_client' };
-    const baseUrl: string | undefined = cfg.baseUrl || undefined;
-    if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+  app.post('/api/settings/downloaders/test', async (req, reply) => {
+    const body = (req.body || {}) as Record<string, unknown>;
+    const client = String(body['client'] || '').toLowerCase();
 
-    const timeoutFetch = async (input: any, init?: any) => {
+    // Validate required client parameter
+    if (!client) {
+      return reply.code(400).send({ ok: false, error: 'client_required' });
+    }
+
+    // Validate client type
+    const validClients = ['qbittorrent', 'sabnzbd', 'nzbget'];
+    if (!validClients.includes(client)) {
+      return reply.code(400).send({ ok: false, error: 'invalid_client' });
+    }
+
+    const incoming = (body['settings'] || {}) as Record<string, unknown>;
+    const saved = await loadDownloaders();
+
+    const timeoutFetch = async (input: string, init?: RequestInit) => {
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 4000);
       try {
@@ -207,11 +238,16 @@ const plugin: FastifyPluginAsync = async (app) => {
 
     try {
       if (client === 'qbittorrent') {
-        if (cfg.username && (cfg.password || cfg.hasPassword)) {
+        const cfg = { ...saved.qbittorrent, ...incoming } as QB &
+          Record<string, unknown>;
+        const baseUrl = cfg.baseUrl;
+        if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+
+        if (cfg.username && (cfg['password'] || cfg.hasPassword)) {
           const loginUrl = new URL('/api/v2/auth/login', baseUrl).toString();
           const form = new URLSearchParams({
-            username: cfg.username || '',
-            password: cfg.password || '',
+            username: cfg.username,
+            password: String(cfg['password'] || ''),
           }).toString();
           const res = await timeoutFetch(loginUrl, {
             method: 'POST',
@@ -229,7 +265,12 @@ const plugin: FastifyPluginAsync = async (app) => {
       }
 
       if (client === 'sabnzbd') {
-        const apiKey = cfg.apiKey || '';
+        const cfg = { ...saved.sabnzbd, ...incoming } as SAB &
+          Record<string, unknown>;
+        const baseUrl = cfg.baseUrl;
+        if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+
+        const apiKey = cfg.apiKey;
         if (!apiKey) return { ok: false, error: 'missing_apiKey' };
         const url = new URL('/api', baseUrl);
         url.searchParams.set('mode', 'queue');
@@ -240,13 +281,18 @@ const plugin: FastifyPluginAsync = async (app) => {
       }
 
       if (client === 'nzbget') {
+        const cfg = { ...saved.nzbget, ...incoming } as NZB &
+          Record<string, unknown>;
+        const baseUrl = cfg.baseUrl;
+        if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+
         const jrpc = new URL('/jsonrpc', baseUrl).toString();
         const auth =
-          cfg.username && (cfg.password || cfg.hasPassword)
+          cfg.username && (cfg['password'] || cfg.hasPassword)
             ? 'Basic ' +
-              Buffer.from(`${cfg.username}:${cfg.password || ''}`).toString(
-                'base64'
-              )
+              Buffer.from(
+                `${cfg.username}:${String(cfg['password'] || '')}`
+              ).toString('base64')
             : undefined;
         const res = await timeoutFetch(jrpc, {
           method: 'POST',
@@ -264,8 +310,7 @@ const plugin: FastifyPluginAsync = async (app) => {
         return { ok: res.ok, status: res.status };
       }
 
-      const res = await timeoutFetch(baseUrl);
-      return { ok: res.ok, status: res.status };
+      return { ok: false, error: 'invalid_client' };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
     }

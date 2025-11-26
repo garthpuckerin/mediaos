@@ -62,8 +62,8 @@ Status: Created 2025-10-21; updated 2025-10-28
 ## Testing & Tooling
 
 - [ ] Playwright smoke coverage for: Add to Wanted + Scan + Queue; Grab + Last Grab panel; Calendar navigation.
-- [ ] Unit tests for settings normalization and downloader adapters.
-- [ ] CI hooks: lint, typecheck, test in PRs.
+- [x] **Unit tests for settings normalization and downloader adapters** - Comprehensive integration tests added
+- [x] **CI hooks: lint, typecheck, test in PRs** - Fully implemented in CI pipeline
 
 ## System & DevOps
 

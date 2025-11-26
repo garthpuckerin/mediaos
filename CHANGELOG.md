@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time documentation update protocols
 - Weekly/monthly/quarterly documentation review cycles
 - **Sprint Planning & Roadmap document with 15-sprint development plan**
+- Comprehensive integration tests for settings API (GET/POST endpoints, persistence, validation)
 
 ### Changed
 
@@ -28,6 +29,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated documentation structure with comprehensive sync requirements
 - Improved branch protection rules and merge strategies
 - Enhanced quality gates with documentation validation
+- **Improved TypeScript type safety in settings.ts - replaced `any` types with proper type definitions**
+- **Reduced ESLint warnings from 192 to 182 (-5.2%) through type safety improvements**
+
+### Fixed
+
+- TypeScript strict mode compliance in settings.ts (exactOptionalPropertyTypes, noPropertyAccessFromIndexSignature)
+- Index signature access patterns using bracket notation for type safety
+- Optional property assignment patterns to avoid undefined violations
+- **Settings configuration now respects CONFIG_DIR environment variable for test isolation**
+- **Security: SABnzbd API key no longer exposed in GET responses (properly sanitized)**
+- **Settings test endpoint now validates required client parameter and client type**
+
+### Tests
+
+- Added comprehensive integration tests for settings normalization and downloader configuration
+- Tests cover: API endpoints, persistence, concurrent writes, data sanitization, validation
+- All tests use actual implementation with temporary file system for isolation
 
 ### Security
 
@@ -35,6 +53,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implemented proper .gitignore for sensitive files
 - Added environment variable validation
 - Enhanced branch protection with security requirements
+- Settings API properly sanitizes sensitive data (passwords, API keys) in responses
 
 ## [0.3.0] - 2025-10-28
 
