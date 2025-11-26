@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeScript strict mode compliance in settings.ts (exactOptionalPropertyTypes, noPropertyAccessFromIndexSignature)
 - Index signature access patterns using bracket notation for type safety
 - Optional property assignment patterns to avoid undefined violations
+- **Settings configuration now respects CONFIG_DIR environment variable for test isolation**
 
 ### Tests
 

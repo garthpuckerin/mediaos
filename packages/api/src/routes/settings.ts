@@ -27,8 +27,13 @@ type Downloaders = {
   sabnzbd: SAB;
 };
 
-const CONFIG_DIR = path.join(process.cwd(), 'config');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'downloaders.json');
+function getConfigDir(): string {
+  return process.env['CONFIG_DIR'] || path.join(process.cwd(), 'config');
+}
+
+function getConfigFile(): string {
+  return path.join(getConfigDir(), 'downloaders.json');
+}
 
 async function ensureDir(filePath: string) {
   try {
@@ -83,7 +88,7 @@ function normalize(obj: unknown): Downloaders {
 
 async function loadDownloaders(): Promise<Downloaders> {
   try {
-    const raw = await fs.readFile(CONFIG_FILE, 'utf8');
+    const raw = await fs.readFile(getConfigFile(), 'utf8');
     const json = JSON.parse(raw);
     return normalize(json);
   } catch (_e) {
@@ -132,8 +137,8 @@ async function saveDownloaders(
       category: payload.sabnzbd.category || undefined,
     },
   };
-  await ensureDir(CONFIG_FILE);
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(toSave, null, 2), 'utf8');
+  await ensureDir(getConfigFile());
+  await fs.writeFile(getConfigFile(), JSON.stringify(toSave, null, 2), 'utf8');
   return normalize(toSave);
 }
 
@@ -180,7 +185,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     };
     let existing: SavedDownloaders = {};
     try {
-      const raw = await fs.readFile(CONFIG_FILE, 'utf8');
+      const raw = await fs.readFile(getConfigFile(), 'utf8');
       existing = JSON.parse(raw) as SavedDownloaders;
     } catch (_e) {
       // ignore
