@@ -1,3 +1,9 @@
+import { promises as fs } from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+
+import Fastify from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   describe,
   it,
@@ -7,12 +13,8 @@ import {
   beforeAll,
   afterAll,
 } from 'vitest';
-import Fastify from 'fastify';
-import type { FastifyInstance } from 'fastify';
+
 import settingsPlugin from '../routes/settings.js';
-import { promises as fs } from 'fs';
-import * as path from 'path';
-import * as os from 'os';
 
 describe('Settings API Integration Tests', () => {
   let app: FastifyInstance;
