@@ -150,10 +150,13 @@ describe('Settings API Integration Tests', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const data = JSON.parse(response.payload);
-      expect(data.qbittorrent.enabled).toBe(true);
-      expect(data.qbittorrent.baseUrl).toBe('http://localhost:9090');
-      expect(data.qbittorrent.hasPassword).toBe(true);
+      const result = JSON.parse(response.payload);
+      expect(result.ok).toBe(true);
+      expect(result.downloaders.qbittorrent.enabled).toBe(true);
+      expect(result.downloaders.qbittorrent.baseUrl).toBe(
+        'http://localhost:9090'
+      );
+      expect(result.downloaders.qbittorrent.hasPassword).toBe(true);
 
       // Verify it was persisted
       const configFile = path.join(testConfigDir, 'downloaders.json');
@@ -177,11 +180,14 @@ describe('Settings API Integration Tests', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const data = JSON.parse(response.payload);
-      expect(data.sabnzbd.enabled).toBe(true);
-      expect(data.sabnzbd.baseUrl).toBe('http://localhost:8081/sab');
-      expect(data.sabnzbd.hasApiKey).toBe(true);
-      expect(data.sabnzbd.category).toBe('media');
+      const result = JSON.parse(response.payload);
+      expect(result.ok).toBe(true);
+      expect(result.downloaders.sabnzbd.enabled).toBe(true);
+      expect(result.downloaders.sabnzbd.baseUrl).toBe(
+        'http://localhost:8081/sab'
+      );
+      expect(result.downloaders.sabnzbd.hasApiKey).toBe(true);
+      expect(result.downloaders.sabnzbd.category).toBe('media');
 
       // Verify persistence
       const configFile = path.join(testConfigDir, 'downloaders.json');
@@ -220,11 +226,14 @@ describe('Settings API Integration Tests', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const data = JSON.parse(response.payload);
-      expect(data.qbittorrent.baseUrl).toBe('http://localhost:9999');
-      expect(data.qbittorrent.username).toBe('newadmin');
-      expect(data.qbittorrent.hasPassword).toBe(true);
-      expect(data.qbittorrent.category).toBe('movies');
+      const result = JSON.parse(response.payload);
+      expect(result.ok).toBe(true);
+      expect(result.downloaders.qbittorrent.baseUrl).toBe(
+        'http://localhost:9999'
+      );
+      expect(result.downloaders.qbittorrent.username).toBe('newadmin');
+      expect(result.downloaders.qbittorrent.hasPassword).toBe(true);
+      expect(result.downloaders.qbittorrent.category).toBe('movies');
 
       // Verify old password is retained
       const configFile = path.join(testConfigDir, 'downloaders.json');
@@ -257,8 +266,9 @@ describe('Settings API Integration Tests', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const data = JSON.parse(response.payload);
-      expect(data.qbittorrent.enabled).toBe(false);
+      const result = JSON.parse(response.payload);
+      expect(result.ok).toBe(true);
+      expect(result.downloaders.qbittorrent.enabled).toBe(false);
     });
 
     it('should validate and normalize numeric fields', async () => {
@@ -275,9 +285,10 @@ describe('Settings API Integration Tests', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const data = JSON.parse(response.payload);
-      expect(data.qbittorrent.timeoutMs).toBe(5000); // Converted to number
-      expect(typeof data.qbittorrent.timeoutMs).toBe('number');
+      const result = JSON.parse(response.payload);
+      expect(result.ok).toBe(true);
+      expect(result.downloaders.qbittorrent.timeoutMs).toBe(5000); // Converted to number
+      expect(typeof result.downloaders.qbittorrent.timeoutMs).toBe('number');
     });
 
     it('should reject invalid numeric fields', async () => {
@@ -293,8 +304,9 @@ describe('Settings API Integration Tests', () => {
       });
 
       expect(response.statusCode).toBe(200);
-      const data = JSON.parse(response.payload);
-      expect(data.qbittorrent.timeoutMs).toBeUndefined(); // Invalid value ignored
+      const result = JSON.parse(response.payload);
+      expect(result.ok).toBe(true);
+      expect(result.downloaders.qbittorrent.timeoutMs).toBeUndefined(); // Invalid value ignored
     });
   });
 
