@@ -80,6 +80,9 @@ describe('Settings API Integration Tests', () => {
     });
 
     it('should load saved downloader configuration', async () => {
+      // Close current app
+      await app.close();
+
       // Pre-populate config
       const configFile = path.join(testConfigDir, 'downloaders.json');
       await fs.mkdir(testConfigDir, { recursive: true });
@@ -101,6 +104,11 @@ describe('Settings API Integration Tests', () => {
           },
         })
       );
+
+      // Create new app instance that will load the config
+      app = Fastify({ logger: false });
+      await app.register(settingsPlugin);
+      await app.ready();
 
       const response = await app.inject({
         method: 'GET',

@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Index signature access patterns using bracket notation for type safety
 - Optional property assignment patterns to avoid undefined violations
 - **Settings configuration now respects CONFIG_DIR environment variable for test isolation**
+- **Security: SABnzbd API key no longer exposed in GET responses (properly sanitized)**
+- **Settings test endpoint now validates required client parameter and client type**
 
 ### Tests
 

@@ -75,10 +75,10 @@ function normalize(obj: unknown): Downloaders {
 
   const sab: SAB = {
     enabled: !!input?.sabnzbd?.enabled,
-    hasApiKey: !!input?.sabnzbd?.apiKey,
+    hasApiKey: !!(input?.sabnzbd as Record<string, unknown>)?.['apiKey'],
   };
   if (input?.sabnzbd?.baseUrl) sab.baseUrl = input.sabnzbd.baseUrl;
-  if (input?.sabnzbd?.apiKey) sab.apiKey = input.sabnzbd.apiKey;
+  // Note: Do NOT copy apiKey to response - sensitive data should not be exposed
   if (input?.sabnzbd?.category) sab.category = input.sabnzbd.category;
   const sabT = isFiniteNumber(input?.sabnzbd?.timeoutMs);
   if (typeof sabT === 'number') sab.timeoutMs = sabT;
@@ -194,9 +194,21 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, downloaders: saved };
   });
 
-  app.post('/api/settings/downloaders/test', async (req) => {
+  app.post('/api/settings/downloaders/test', async (req, reply) => {
     const body = (req.body || {}) as Record<string, unknown>;
     const client = String(body['client'] || '').toLowerCase();
+
+    // Validate required client parameter
+    if (!client) {
+      return reply.code(400).send({ ok: false, error: 'client_required' });
+    }
+
+    // Validate client type
+    const validClients = ['qbittorrent', 'sabnzbd', 'nzbget'];
+    if (!validClients.includes(client)) {
+      return reply.code(400).send({ ok: false, error: 'invalid_client' });
+    }
+
     const incoming = (body['settings'] || {}) as Record<string, unknown>;
     const saved = await loadDownloaders();
 
