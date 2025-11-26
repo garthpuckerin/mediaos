@@ -5,7 +5,15 @@
       "Bash(git add:*)",
       "Bash(git reset:*)",
       "Bash(git commit -m \"$(cat <<''EOF''\nfeat: SAB-focused downloads with live queue, NZB upload, and auto-verify on completion\n\nAdd comprehensive SABnzbd integration with live queue monitoring, NZB file upload support, and optional auto-verify when downloads complete. Includes Activity page with live queue actions (Pause/Resume/Remove), SAB history integration, and enhanced Item Detail with Last Grab panel and re-grab functionality. Add toast notification system, calendar event navigation, and richer wanted scan results with Usenet/Torrent mix.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git branch:*)",
+      "Bash(node --loader tsx --no-warnings --experimental-specifier-resolution=node ./node_modules/vitest/vitest.mjs run:*)",
+      "Bash(npx tsc:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(git restore:*)",
+      "Bash(npm ci:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []

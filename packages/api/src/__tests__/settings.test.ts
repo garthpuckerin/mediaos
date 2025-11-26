@@ -1,211 +1,477 @@
-import { describe, it, expect } from 'vitest';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+} from 'vitest';
+import Fastify from 'fastify';
+import type { FastifyInstance } from 'fastify';
+import settingsPlugin from '../routes/settings.js';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
-describe('Settings Normalization', () => {
-  describe('isFiniteNumber utility', () => {
-    // Helper function to test - extracted pattern from settings.ts
-    function isFiniteNumber(v: unknown): number | undefined {
-      const n = Number(v);
-      return Number.isFinite(n) ? Math.trunc(n) : undefined;
+describe('Settings API Integration Tests', () => {
+  let app: FastifyInstance;
+  let testConfigDir: string;
+  let originalConfigDir: string;
+
+  beforeAll(async () => {
+    // Create temporary config directory for testing
+    testConfigDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mediaos-test-'));
+    originalConfigDir = process.env['CONFIG_DIR'] || '';
+    process.env['CONFIG_DIR'] = testConfigDir;
+  });
+
+  afterAll(async () => {
+    // Cleanup temp directory
+    await fs.rm(testConfigDir, { recursive: true, force: true });
+    if (originalConfigDir) {
+      process.env['CONFIG_DIR'] = originalConfigDir;
+    } else {
+      delete process.env['CONFIG_DIR'];
     }
+  });
 
-    it('should convert valid number strings', () => {
-      expect(isFiniteNumber('42')).toBe(42);
-      expect(isFiniteNumber('3.14')).toBe(3);
-      expect(isFiniteNumber('0')).toBe(0);
+  beforeEach(async () => {
+    app = Fastify({ logger: false });
+    await app.register(settingsPlugin);
+    await app.ready();
+  });
+
+  afterEach(async () => {
+    await app.close();
+    // Clean up config file between tests
+    const configFile = path.join(testConfigDir, 'downloaders.json');
+    try {
+      await fs.unlink(configFile);
+    } catch {
+      // File might not exist, that's ok
+    }
+  });
+
+  describe('GET /api/settings/downloaders', () => {
+    it('should return default disabled downloaders when no config exists', async () => {
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/settings/downloaders',
+      });
+
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+
+      // Verify structure
+      expect(data).toHaveProperty('qbittorrent');
+      expect(data).toHaveProperty('nzbget');
+      expect(data).toHaveProperty('sabnzbd');
+
+      // Verify defaults
+      expect(data.qbittorrent.enabled).toBe(false);
+      expect(data.qbittorrent.hasPassword).toBe(false);
+      expect(data.nzbget.enabled).toBe(false);
+      expect(data.nzbget.hasPassword).toBe(false);
+      expect(data.sabnzbd.enabled).toBe(false);
+      expect(data.sabnzbd.hasApiKey).toBe(false);
     });
 
-    it('should handle actual numbers', () => {
-      expect(isFiniteNumber(42)).toBe(42);
-      expect(isFiniteNumber(3.14)).toBe(3);
-      expect(isFiniteNumber(0)).toBe(0);
-    });
+    it('should load saved downloader configuration', async () => {
+      // Pre-populate config
+      const configFile = path.join(testConfigDir, 'downloaders.json');
+      await fs.mkdir(testConfigDir, { recursive: true });
+      await fs.writeFile(
+        configFile,
+        JSON.stringify({
+          qbittorrent: {
+            baseUrl: 'http://localhost:8080',
+            username: 'admin',
+            password: 'secret123',
+            category: 'movies',
+            timeoutMs: 5000,
+          },
+          sabnzbd: {
+            baseUrl: 'http://localhost:8080/sabnzbd',
+            apiKey: 'test-api-key-12345',
+            category: 'tv',
+            timeoutMs: 10000,
+          },
+        })
+      );
 
-    it('should truncate decimals', () => {
-      expect(isFiniteNumber(3.14)).toBe(3);
-      expect(isFiniteNumber(9.99)).toBe(9);
-      expect(isFiniteNumber(-2.8)).toBe(-2);
-    });
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/settings/downloaders',
+      });
 
-    it('should return undefined for invalid values', () => {
-      expect(isFiniteNumber('not a number')).toBeUndefined();
-      expect(isFiniteNumber(NaN)).toBeUndefined();
-      expect(isFiniteNumber(Infinity)).toBeUndefined();
-      expect(isFiniteNumber(-Infinity)).toBeUndefined();
-      expect(isFiniteNumber(undefined)).toBeUndefined();
-    });
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
 
-    it('should handle null as zero', () => {
-      // Number(null) === 0, which is a quirk of JavaScript
-      expect(isFiniteNumber(null)).toBe(0);
+      // qBittorrent should be enabled with settings
+      expect(data.qbittorrent.enabled).toBe(true);
+      expect(data.qbittorrent.baseUrl).toBe('http://localhost:8080');
+      expect(data.qbittorrent.username).toBe('admin');
+      expect(data.qbittorrent.hasPassword).toBe(true);
+      expect(data.qbittorrent.password).toBeUndefined(); // Password should not be exposed
+      expect(data.qbittorrent.category).toBe('movies');
+      expect(data.qbittorrent.timeoutMs).toBe(5000);
+
+      // SABnzbd should be enabled
+      expect(data.sabnzbd.enabled).toBe(true);
+      expect(data.sabnzbd.baseUrl).toBe('http://localhost:8080/sabnzbd');
+      expect(data.sabnzbd.hasApiKey).toBe(true);
+      expect(data.sabnzbd.apiKey).toBeUndefined(); // API key should not be exposed
+      expect(data.sabnzbd.category).toBe('tv');
+      expect(data.sabnzbd.timeoutMs).toBe(10000);
+
+      // NZBGet should be disabled
+      expect(data.nzbget.enabled).toBe(false);
     });
   });
 
-  describe('Downloaders Configuration', () => {
-    const CONFIG_DIR = path.join(process.cwd(), 'config');
-    const CONFIG_FILE = path.join(CONFIG_DIR, 'downloaders.json');
+  describe('POST /api/settings/downloaders', () => {
+    it('should save qBittorrent configuration', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            baseUrl: 'http://localhost:9090',
+            username: 'testuser',
+            password: 'testpass',
+            category: 'downloads',
+            timeoutMs: 3000,
+          },
+        },
+      });
 
-    it('should have correct config paths', () => {
-      expect(CONFIG_DIR).toContain('config');
-      expect(CONFIG_FILE).toContain('downloaders.json');
-      expect(path.isAbsolute(CONFIG_FILE)).toBe(true);
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+      expect(data.qbittorrent.enabled).toBe(true);
+      expect(data.qbittorrent.baseUrl).toBe('http://localhost:9090');
+      expect(data.qbittorrent.hasPassword).toBe(true);
+
+      // Verify it was persisted
+      const configFile = path.join(testConfigDir, 'downloaders.json');
+      const savedData = JSON.parse(await fs.readFile(configFile, 'utf-8'));
+      expect(savedData.qbittorrent.password).toBe('testpass');
     });
 
-    it('should handle missing config file gracefully', async () => {
-      // Test that reading non-existent file doesn't crash
-      try {
-        await fs.readFile('/nonexistent/path/file.json', 'utf8');
-      } catch (error) {
-        expect(error).toBeDefined();
-        // This is expected behavior - should handle gracefully in actual code
-      }
+    it('should save SABnzbd configuration', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          sabnzbd: {
+            enabled: true,
+            baseUrl: 'http://localhost:8081/sab',
+            apiKey: 'my-secret-api-key',
+            category: 'media',
+            timeoutMs: 15000,
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+      expect(data.sabnzbd.enabled).toBe(true);
+      expect(data.sabnzbd.baseUrl).toBe('http://localhost:8081/sab');
+      expect(data.sabnzbd.hasApiKey).toBe(true);
+      expect(data.sabnzbd.category).toBe('media');
+
+      // Verify persistence
+      const configFile = path.join(testConfigDir, 'downloaders.json');
+      const savedData = JSON.parse(await fs.readFile(configFile, 'utf-8'));
+      expect(savedData.sabnzbd.apiKey).toBe('my-secret-api-key');
+    });
+
+    it('should update existing configuration', async () => {
+      // Initial save
+      await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            baseUrl: 'http://localhost:8080',
+            username: 'admin',
+            password: 'oldpass',
+          },
+        },
+      });
+
+      // Update
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            baseUrl: 'http://localhost:9999',
+            username: 'newadmin',
+            // Password not provided - should keep old one
+            category: 'movies',
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+      expect(data.qbittorrent.baseUrl).toBe('http://localhost:9999');
+      expect(data.qbittorrent.username).toBe('newadmin');
+      expect(data.qbittorrent.hasPassword).toBe(true);
+      expect(data.qbittorrent.category).toBe('movies');
+
+      // Verify old password is retained
+      const configFile = path.join(testConfigDir, 'downloaders.json');
+      const savedData = JSON.parse(await fs.readFile(configFile, 'utf-8'));
+      expect(savedData.qbittorrent.password).toBe('oldpass');
+    });
+
+    it('should handle disabling downloaders', async () => {
+      // Enable first
+      await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            baseUrl: 'http://localhost:8080',
+          },
+        },
+      });
+
+      // Disable
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: false,
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+      expect(data.qbittorrent.enabled).toBe(false);
+    });
+
+    it('should validate and normalize numeric fields', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            baseUrl: 'http://localhost:8080',
+            timeoutMs: '5000', // String number
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+      expect(data.qbittorrent.timeoutMs).toBe(5000); // Converted to number
+      expect(typeof data.qbittorrent.timeoutMs).toBe('number');
+    });
+
+    it('should reject invalid numeric fields', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            timeoutMs: 'not-a-number',
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+      const data = JSON.parse(response.payload);
+      expect(data.qbittorrent.timeoutMs).toBeUndefined(); // Invalid value ignored
     });
   });
 
-  describe('Type Guards', () => {
-    it('should identify boolean values correctly', () => {
-      // Test boolean coercion patterns used in settings normalization
-      const truthyValue: unknown = 'string';
-      const falsyValue: unknown = '';
-      const nullValue: unknown = null;
-      const undefinedValue: unknown = undefined;
+  describe('POST /api/settings/downloaders/test', () => {
+    it('should test qBittorrent connection', async () => {
+      // Note: This test requires a mock or actual qBittorrent instance
+      // For now, test the endpoint structure
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders/test',
+        payload: {
+          client: 'qbittorrent',
+          baseUrl: 'http://localhost:8080',
+          username: 'admin',
+          password: 'adminpass',
+        },
+      });
 
-      expect(!!true).toBe(true);
-      expect(!!false).toBe(false);
-      expect(!!1).toBe(true);
-      expect(!!0).toBe(false);
-      expect(!!truthyValue).toBe(true);
-      expect(!!falsyValue).toBe(false);
-      expect(!!nullValue).toBe(false);
-      expect(!!undefinedValue).toBe(false);
+      // Should return structured response (success or error)
+      expect([200, 400, 500]).toContain(response.statusCode);
+      const data = JSON.parse(response.payload);
+      expect(data).toHaveProperty('ok');
     });
 
-    it('should handle optional property checks', () => {
-      const obj = { enabled: true, baseUrl: 'http://localhost' };
-      expect(obj.enabled).toBe(true);
-      expect(obj.baseUrl).toBe('http://localhost');
+    it('should test SABnzbd connection', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders/test',
+        payload: {
+          client: 'sabnzbd',
+          baseUrl: 'http://localhost:8080/sabnzbd',
+          apiKey: 'test-key',
+        },
+      });
 
-      const emptyObj = {};
-      expect((emptyObj as Record<string, unknown>)['enabled']).toBeUndefined();
-    });
-  });
-
-  describe('Settings Structure', () => {
-    it('should define correct downloader types', () => {
-      // Test structure matches expected types
-      const qbConfig = {
-        enabled: true,
-        baseUrl: 'http://localhost:8080',
-        username: 'admin',
-        hasPassword: true,
-        category: 'movies',
-        timeoutMs: 5000,
-      };
-
-      expect(qbConfig.enabled).toBe(true);
-      expect(qbConfig.baseUrl).toBe('http://localhost:8080');
-      expect(qbConfig.timeoutMs).toBe(5000);
+      expect([200, 400, 500]).toContain(response.statusCode);
+      const data = JSON.parse(response.payload);
+      expect(data).toHaveProperty('ok');
     });
 
-    it('should handle optional properties', () => {
-      const minimalConfig = {
-        enabled: false,
-        hasPassword: false,
-      };
+    it('should test NZBGet connection', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders/test',
+        payload: {
+          client: 'nzbget',
+          baseUrl: 'http://localhost:6789',
+          username: 'nzbget',
+          password: 'tegbzn6789',
+        },
+      });
 
-      expect(minimalConfig.enabled).toBe(false);
-      expect(minimalConfig.hasPassword).toBe(false);
+      expect([200, 400, 500]).toContain(response.statusCode);
+      const data = JSON.parse(response.payload);
+      expect(data).toHaveProperty('ok');
     });
 
-    it('should support SABnzbd-specific properties', () => {
-      const sabConfig = {
-        enabled: true,
-        baseUrl: 'http://localhost:8080/sabnzbd',
-        apiKey: 'test-api-key',
-        hasApiKey: true,
-        category: 'tv',
-      };
+    it('should require client parameter', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders/test',
+        payload: {
+          baseUrl: 'http://localhost:8080',
+        },
+      });
 
-      expect(sabConfig.apiKey).toBe('test-api-key');
-      expect(sabConfig.hasApiKey).toBe(true);
-    });
-  });
-
-  describe('URL Construction', () => {
-    it('should construct valid URLs for qBittorrent', () => {
-      const baseUrl = 'http://localhost:8080';
-      const loginUrl = new URL('/api/v2/auth/login', baseUrl).toString();
-      const versionUrl = new URL('/api/v2/app/version', baseUrl).toString();
-
-      expect(loginUrl).toBe('http://localhost:8080/api/v2/auth/login');
-      expect(versionUrl).toBe('http://localhost:8080/api/v2/app/version');
+      expect(response.statusCode).toBe(400);
     });
 
-    it('should construct valid URLs for SABnzbd', () => {
-      const baseUrl = 'http://localhost:8080/sabnzbd';
-      const url = new URL('/api', baseUrl);
-      url.searchParams.set('mode', 'queue');
-      url.searchParams.set('output', 'json');
-      url.searchParams.set('apikey', 'test-key');
+    it('should validate client type', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders/test',
+        payload: {
+          client: 'invalid-client',
+          baseUrl: 'http://localhost:8080',
+        },
+      });
 
-      expect(url.toString()).toContain('/api');
-      expect(url.toString()).toContain('mode=queue');
-      expect(url.toString()).toContain('output=json');
-      expect(url.toString()).toContain('apikey=test-key');
-    });
-
-    it('should construct valid URLs for NZBGet', () => {
-      const baseUrl = 'http://localhost:6789';
-      const jrpcUrl = new URL('/jsonrpc', baseUrl).toString();
-
-      expect(jrpcUrl).toBe('http://localhost:6789/jsonrpc');
+      expect(response.statusCode).toBe(400);
     });
   });
 
-  describe('Authentication Handling', () => {
-    it('should create Basic auth header correctly', () => {
-      const username = 'testuser';
-      const password = 'testpass';
-      const auth =
-        'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+  describe('Configuration Persistence', () => {
+    it('should create config directory if it does not exist', async () => {
+      // Remove config dir
+      await fs.rm(testConfigDir, { recursive: true, force: true });
 
-      expect(auth).toContain('Basic ');
-      expect(auth).toBe('Basic dGVzdHVzZXI6dGVzdHBhc3M=');
+      const response = await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            baseUrl: 'http://localhost:8080',
+          },
+        },
+      });
+
+      expect(response.statusCode).toBe(200);
+
+      // Verify directory was created
+      const configFile = path.join(testConfigDir, 'downloaders.json');
+      const stats = await fs.stat(configFile);
+      expect(stats.isFile()).toBe(true);
     });
 
-    it('should handle empty password', () => {
-      const username = 'testuser';
-      const password = '';
-      const auth =
-        'Basic ' + Buffer.from(`${username}:${password}`).toString('base64');
+    it('should handle concurrent writes safely', async () => {
+      // Make multiple simultaneous requests
+      const requests = Array.from({ length: 5 }, (_, i) =>
+        app.inject({
+          method: 'POST',
+          url: '/api/settings/downloaders',
+          payload: {
+            qbittorrent: {
+              enabled: true,
+              baseUrl: `http://localhost:${8080 + i}`,
+              username: `user${i}`,
+            },
+          },
+        })
+      );
 
-      expect(auth).toContain('Basic ');
-      const decoded = Buffer.from(
-        auth.replace('Basic ', ''),
-        'base64'
-      ).toString();
-      expect(decoded).toBe('testuser:');
+      const responses = await Promise.all(requests);
+
+      // All should succeed
+      responses.forEach((response) => {
+        expect(response.statusCode).toBe(200);
+      });
+
+      // Final config should be valid
+      const finalResponse = await app.inject({
+        method: 'GET',
+        url: '/api/settings/downloaders',
+      });
+
+      expect(finalResponse.statusCode).toBe(200);
+      const data = JSON.parse(finalResponse.payload);
+      expect(data.qbittorrent.enabled).toBe(true);
     });
   });
 
-  describe('URLSearchParams Handling', () => {
-    it('should create form data for qBittorrent login', () => {
-      const form = new URLSearchParams({
-        username: 'admin',
-        password: 'secret',
-      }).toString();
+  describe('Data Sanitization', () => {
+    it('should not expose sensitive fields in GET responses', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/api/settings/downloaders',
+        payload: {
+          qbittorrent: {
+            enabled: true,
+            password: 'super-secret',
+          },
+          sabnzbd: {
+            enabled: true,
+            apiKey: 'top-secret-key',
+          },
+          nzbget: {
+            enabled: true,
+            password: 'nzbget-secret',
+          },
+        },
+      });
 
-      expect(form).toBe('username=admin&password=secret');
-    });
+      const response = await app.inject({
+        method: 'GET',
+        url: '/api/settings/downloaders',
+      });
 
-    it('should handle special characters in params', () => {
-      const apiKey = 'abc123!@#$%^&*()';
-      const params = new URLSearchParams();
-      params.set('apikey', apiKey);
+      const data = JSON.parse(response.payload);
 
-      expect(params.toString()).toContain('apikey=');
-      expect(params.get('apikey')).toBe(apiKey);
+      // Passwords and API keys should not be in response
+      expect(data.qbittorrent.password).toBeUndefined();
+      expect(data.sabnzbd.apiKey).toBeUndefined();
+      expect(data.nzbget.password).toBeUndefined();
+
+      // But indicators should be present
+      expect(data.qbittorrent.hasPassword).toBe(true);
+      expect(data.sabnzbd.hasApiKey).toBe(true);
+      expect(data.nzbget.hasPassword).toBe(true);
     });
   });
 });
