@@ -4,7 +4,6 @@
     "module": "ES2022",
     "moduleResolution": "Node",
     "outDir": "dist",
-    "rootDir": "src",
     "baseUrl": ".",
     "paths": {
       "@mediaos/workers": ["../workers/src"]
