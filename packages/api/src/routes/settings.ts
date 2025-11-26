@@ -56,7 +56,12 @@ type PartialDownloaders = {
 
 function normalize(obj: unknown): Downloaders {
   const input = obj as PartialDownloaders;
-  const qb: QB = { enabled: !!input?.qbittorrent?.enabled, hasPassword: false };
+
+  // qBittorrent: enabled if explicitly enabled OR if baseUrl is present
+  const qb: QB = {
+    enabled: !!input?.qbittorrent?.enabled || !!input?.qbittorrent?.baseUrl,
+    hasPassword: false,
+  };
   if (input?.qbittorrent?.baseUrl) qb.baseUrl = input.qbittorrent.baseUrl;
   if (input?.qbittorrent?.username) qb.username = input.qbittorrent.username;
   if (input?.qbittorrent?.category) qb.category = input.qbittorrent.category;
@@ -65,7 +70,11 @@ function normalize(obj: unknown): Downloaders {
   const qbT = isFiniteNumber(input?.qbittorrent?.timeoutMs);
   if (typeof qbT === 'number') qb.timeoutMs = qbT;
 
-  const nz: NZB = { enabled: !!input?.nzbget?.enabled, hasPassword: false };
+  // NZBGet: enabled if explicitly enabled OR if baseUrl is present
+  const nz: NZB = {
+    enabled: !!input?.nzbget?.enabled || !!input?.nzbget?.baseUrl,
+    hasPassword: false,
+  };
   if (input?.nzbget?.baseUrl) nz.baseUrl = input.nzbget.baseUrl;
   if (input?.nzbget?.username) nz.username = input.nzbget.username;
   if ((input?.nzbget as Record<string, unknown>)?.['password'])
@@ -73,8 +82,9 @@ function normalize(obj: unknown): Downloaders {
   const nzT = isFiniteNumber(input?.nzbget?.timeoutMs);
   if (typeof nzT === 'number') nz.timeoutMs = nzT;
 
+  // SABnzbd: enabled if explicitly enabled OR if baseUrl is present
   const sab: SAB = {
-    enabled: !!input?.sabnzbd?.enabled,
+    enabled: !!input?.sabnzbd?.enabled || !!input?.sabnzbd?.baseUrl,
     hasApiKey: !!(input?.sabnzbd as Record<string, unknown>)?.['apiKey'],
   };
   if (input?.sabnzbd?.baseUrl) sab.baseUrl = input.sabnzbd.baseUrl;
