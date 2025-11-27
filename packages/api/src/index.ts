@@ -12,6 +12,7 @@ import dotenv from 'dotenv';
 import Fastify from 'fastify';
 
 import activityRoutes from './routes/activity';
+import authRoutes from './routes/auth';
 import calendarRoutes from './routes/calendar';
 import downloadsRoutes from './routes/downloads';
 import filesRoutes from './routes/files';
@@ -23,6 +24,8 @@ import verifyRoutes from './routes/verify';
 import verifyJobsRoutes from './routes/verifyJobs';
 import verifySettingsRoutes from './routes/verifySettings';
 import wantedRoutes from './routes/wanted';
+import { validateConfigWithWarnings } from './services/config';
+import { loadDownloadersWithCredentials } from './routes/settings';
 
 // Load environment variables from root directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,6 +66,10 @@ await app.register(cors, {
 });
 
 // Application routes
+// Auth routes (always public)
+await app.register(authRoutes);
+
+// Other routes (can be protected with middleware in future)
 await app.register(libraryRoutes);
 await app.register(filesRoutes);
 await app.register(indexersRoutes, { prefix: '/api/indexers' });
@@ -264,14 +271,7 @@ try {
     const DL_FILE = path.join(CONFIG_DIR, 'downloaders.json');
     const MON_FILE = path.join(CONFIG_DIR, 'monitor.json');
 
-    const loadDownloaders = async (): Promise<any> => {
-      try {
-        const raw = await fs.readFile(DL_FILE, 'utf8');
-        return JSON.parse(raw) || {};
-      } catch {
-        return {};
-      }
-    };
+    // Use loadDownloadersWithCredentials from settings module (includes decryption)
     const ensureDir = async (f: string) => {
       try {
         await fs.mkdir(path.dirname(f), { recursive: true });
@@ -305,7 +305,7 @@ try {
 
     const tick = async () => {
       try {
-        const cfg = await loadDownloaders();
+        const cfg = await loadDownloadersWithCredentials();
         const sab = cfg.sabnzbd || {};
         if (!sab.enabled || !sab.baseUrl || !sab.apiKey) return;
         const hist = await sabnzbd.history({

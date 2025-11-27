@@ -1,22 +1,8 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-
 import { qbittorrent, sabnzbd } from '@mediaos/adapters/src/downloaders';
 import type { FastifyPluginAsync } from 'fastify';
 
 import { loadGrabs } from '../services/grabStore';
-
-const CONFIG_DIR = path.join(process.cwd(), 'config');
-const DL_FILE = path.join(CONFIG_DIR, 'downloaders.json');
-
-async function loadDownloaders(): Promise<any> {
-  try {
-    const raw = await fs.readFile(DL_FILE, 'utf8');
-    return JSON.parse(raw) || {};
-  } catch {
-    return {};
-  }
-}
+import { loadDownloadersWithCredentials } from './settings';
 
 const plugin: FastifyPluginAsync = async (app) => {
   app.get('/api/activity/queue', async () => {
@@ -58,7 +44,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     const items: any[] = [];
     // SAB history
     try {
-      const cfg = await loadDownloaders();
+      const cfg = await loadDownloadersWithCredentials();
       if (cfg.sabnzbd?.enabled && cfg.sabnzbd?.baseUrl && cfg.sabnzbd?.apiKey) {
         const r = await sabnzbd.history({
           baseUrl: String(cfg.sabnzbd.baseUrl),
@@ -93,7 +79,7 @@ const plugin: FastifyPluginAsync = async (app) => {
   });
 
   app.get('/api/activity/live', async () => {
-    const cfg = await loadDownloaders();
+    const cfg = await loadDownloadersWithCredentials();
     const out: any[] = [];
     // qBittorrent
     if (cfg.qbittorrent?.enabled && cfg.qbittorrent?.baseUrl) {
@@ -170,7 +156,7 @@ const plugin: FastifyPluginAsync = async (app) => {
       | 'delete';
     const id = String(b.id || '');
     if (!client || !op || !id) return { ok: false, error: 'missing_params' };
-    const cfg = await loadDownloaders();
+    const cfg = await loadDownloadersWithCredentials();
     try {
       if (client === 'qbittorrent') {
         const c = cfg.qbittorrent || {};

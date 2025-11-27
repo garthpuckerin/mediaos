@@ -3,6 +3,8 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { decrypt, encrypt, isEncrypted } from '../services/encryption';
+
 type DlCommon = { enabled: boolean; baseUrl?: string; timeoutMs?: number };
 type QB = DlCommon & {
   username?: string;
@@ -48,52 +50,88 @@ function isFiniteNumber(v: unknown): number | undefined {
   return Number.isFinite(n) ? Math.trunc(n) : undefined;
 }
 
-type PartialDownloaders = {
-  qbittorrent?: Partial<QB>;
-  nzbget?: Partial<NZB>;
-  sabnzbd?: Partial<SAB>;
-};
-
-function normalize(obj: unknown): Downloaders {
-  const input = obj as PartialDownloaders;
-
-  // qBittorrent: enabled if explicitly enabled OR if baseUrl is present
+/**
+ * Normalizes downloader config for API responses (no credentials)
+ */
+function normalize(obj: any): Downloaders {
   const qb: QB = {
-    enabled: !!input?.qbittorrent?.enabled || !!input?.qbittorrent?.baseUrl,
+    enabled: !!obj?.qbittorrent?.enabled || !!obj?.qbittorrent?.baseUrl,
     hasPassword: false,
   };
-  if (input?.qbittorrent?.baseUrl) qb.baseUrl = input.qbittorrent.baseUrl;
-  if (input?.qbittorrent?.username) qb.username = input.qbittorrent.username;
-  if (input?.qbittorrent?.category) qb.category = input.qbittorrent.category;
-  if ((input?.qbittorrent as Record<string, unknown>)?.['password'])
+  if (obj?.qbittorrent?.baseUrl) qb.baseUrl = obj.qbittorrent.baseUrl;
+  if (obj?.qbittorrent?.username) qb.username = obj.qbittorrent.username;
+  if (obj?.qbittorrent?.category) qb.category = obj.qbittorrent.category;
+  if ((obj?.qbittorrent as Record<string, unknown>)?.['password'])
     qb.hasPassword = true;
-  const qbT = isFiniteNumber(input?.qbittorrent?.timeoutMs);
+  const qbT = isFiniteNumber(obj?.qbittorrent?.timeoutMs);
   if (typeof qbT === 'number') qb.timeoutMs = qbT;
 
   // NZBGet: enabled if explicitly enabled OR if baseUrl is present
   const nz: NZB = {
-    enabled: !!input?.nzbget?.enabled || !!input?.nzbget?.baseUrl,
+    enabled: !!obj?.nzbget?.enabled || !!obj?.nzbget?.baseUrl,
     hasPassword: false,
   };
-  if (input?.nzbget?.baseUrl) nz.baseUrl = input.nzbget.baseUrl;
-  if (input?.nzbget?.username) nz.username = input.nzbget.username;
-  if ((input?.nzbget as Record<string, unknown>)?.['password'])
+  if (obj?.nzbget?.baseUrl) nz.baseUrl = obj.nzbget.baseUrl;
+  if (obj?.nzbget?.username) nz.username = obj.nzbget.username;
+  if ((obj?.nzbget as Record<string, unknown>)?.['password'])
     nz.hasPassword = true;
-  const nzT = isFiniteNumber(input?.nzbget?.timeoutMs);
+  const nzT = isFiniteNumber(obj?.nzbget?.timeoutMs);
   if (typeof nzT === 'number') nz.timeoutMs = nzT;
 
   // SABnzbd: enabled if explicitly enabled OR if baseUrl is present
   const sab: SAB = {
-    enabled: !!input?.sabnzbd?.enabled || !!input?.sabnzbd?.baseUrl,
-    hasApiKey: !!(input?.sabnzbd as Record<string, unknown>)?.['apiKey'],
+    enabled: !!obj?.sabnzbd?.enabled || !!obj?.sabnzbd?.baseUrl,
+    hasApiKey: !!(obj?.sabnzbd as Record<string, unknown>)?.['apiKey'],
   };
-  if (input?.sabnzbd?.baseUrl) sab.baseUrl = input.sabnzbd.baseUrl;
+  if (obj?.sabnzbd?.baseUrl) sab.baseUrl = obj.sabnzbd.baseUrl;
   // Note: Do NOT copy apiKey to response - sensitive data should not be exposed
-  if (input?.sabnzbd?.category) sab.category = input.sabnzbd.category;
-  const sabT = isFiniteNumber(input?.sabnzbd?.timeoutMs);
+  if (obj?.sabnzbd?.category) sab.category = obj.sabnzbd.category;
+  const sabT = isFiniteNumber(obj?.sabnzbd?.timeoutMs);
   if (typeof sabT === 'number') sab.timeoutMs = sabT;
 
   return { qbittorrent: qb, nzbget: nz, sabnzbd: sab };
+}
+
+/**
+ * Decrypts credentials from stored config
+ */
+function decryptCredentials(obj: any): any {
+  const result = JSON.parse(JSON.stringify(obj)); // deep clone
+
+  // Decrypt qBittorrent password
+  if (result?.qbittorrent?.password) {
+    try {
+      if (isEncrypted(result.qbittorrent.password)) {
+        result.qbittorrent.password = decrypt(result.qbittorrent.password);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt qBittorrent password:', error);
+    }
+  }
+
+  // Decrypt NZBGet password
+  if (result?.nzbget?.password) {
+    try {
+      if (isEncrypted(result.nzbget.password)) {
+        result.nzbget.password = decrypt(result.nzbget.password);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt NZBGet password:', error);
+    }
+  }
+
+  // Decrypt SABnzbd API key
+  if (result?.sabnzbd?.apiKey) {
+    try {
+      if (isEncrypted(result.sabnzbd.apiKey)) {
+        result.sabnzbd.apiKey = decrypt(result.sabnzbd.apiKey);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt SABnzbd API key:', error);
+    }
+  }
+
+  return result;
 }
 
 async function loadDownloaders(): Promise<Downloaders> {
@@ -106,16 +144,21 @@ async function loadDownloaders(): Promise<Downloaders> {
   }
 }
 
-type SavedDownloaders = {
-  qbittorrent?: { password?: string };
-  nzbget?: { password?: string };
-  sabnzbd?: Record<string, unknown>;
-};
+/**
+ * Loads downloader config with decrypted credentials for internal use
+ * @returns Raw config object with decrypted passwords/API keys
+ */
+export async function loadDownloadersWithCredentials(): Promise<any> {
+  try {
+    const raw = await fs.readFile(getConfigFile(), 'utf8');
+    const json = JSON.parse(raw);
+    return decryptCredentials(json);
+  } catch (_e) {
+    return {};
+  }
+}
 
-async function saveDownloaders(
-  payload: Downloaders,
-  existing?: SavedDownloaders
-) {
+async function saveDownloaders(payload: Downloaders, existing?: any) {
   const toSave = {
     qbittorrent: {
       enabled: !!payload.qbittorrent.enabled,
@@ -146,7 +189,30 @@ async function saveDownloaders(
       timeoutMs: isFiniteNumber(payload.sabnzbd.timeoutMs),
       category: payload.sabnzbd.category || undefined,
     },
-  };
+  } as any;
+
+  // Encrypt sensitive fields before saving
+  try {
+    if (
+      toSave.qbittorrent.password &&
+      !isEncrypted(toSave.qbittorrent.password)
+    ) {
+      toSave.qbittorrent.password = encrypt(toSave.qbittorrent.password);
+    }
+    if (toSave.nzbget.password && !isEncrypted(toSave.nzbget.password)) {
+      toSave.nzbget.password = encrypt(toSave.nzbget.password);
+    }
+    if (toSave.sabnzbd.apiKey && !isEncrypted(toSave.sabnzbd.apiKey)) {
+      toSave.sabnzbd.apiKey = encrypt(toSave.sabnzbd.apiKey);
+    }
+  } catch (error) {
+    console.warn(
+      '⚠️  Encryption failed, credentials will be stored in plain text:',
+      error
+    );
+    // Continue without encryption if ENCRYPTION_KEY not set
+  }
+
   await ensureDir(getConfigFile());
   await fs.writeFile(getConfigFile(), JSON.stringify(toSave, null, 2), 'utf8');
   return normalize(toSave);
@@ -193,10 +259,10 @@ const plugin: FastifyPluginAsync = async (app) => {
       nzbget: nzIn,
       sabnzbd: sabIn,
     };
-    let existing: SavedDownloaders = {};
+    let existing: any = {};
     try {
       const raw = await fs.readFile(getConfigFile(), 'utf8');
-      existing = JSON.parse(raw) as SavedDownloaders;
+      existing = JSON.parse(raw) as any;
     } catch (_e) {
       // ignore
     }
