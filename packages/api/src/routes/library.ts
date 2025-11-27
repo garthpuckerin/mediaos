@@ -4,6 +4,8 @@ import path from 'path';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
+import { authenticate, requireAdmin } from '../middleware/auth';
+
 type LibraryItem = {
   id: string;
   kind: 'movie' | 'series' | 'music' | 'book';
@@ -42,20 +44,24 @@ async function saveLibrary(items: LibraryItem[]) {
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/api/library', async () => {
+  app.get('/api/library', { preHandler: authenticate }, async () => {
     const items = await loadLibrary();
     return { items };
   });
 
-  app.get('/api/library/:id', async (req, _res) => {
-    const id = (req.params as any).id as string;
-    const items = await loadLibrary();
-    const item = items.find((it) => it.id === id || it.title === id);
-    if (!item) return { ok: false, error: 'not_found' };
-    return { ok: true, item };
-  });
+  app.get(
+    '/api/library/:id',
+    { preHandler: authenticate },
+    async (req, _res) => {
+      const id = (req.params as any).id as string;
+      const items = await loadLibrary();
+      const item = items.find((it) => it.id === id || it.title === id);
+      if (!item) return { ok: false, error: 'not_found' };
+      return { ok: true, item };
+    }
+  );
 
-  app.post('/api/library', async (req, _res) => {
+  app.post('/api/library', { preHandler: requireAdmin }, async (req, _res) => {
     const schema = z.object({
       id: z.string().optional(),
       kind: z.enum(['movie', 'series', 'music', 'book']),
@@ -87,23 +93,27 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, item };
   });
 
-  app.post('/api/library/artwork', async (req) => {
-    const schema = z.object({
-      title: z.string(),
-      tab: z.enum(['poster', 'background', 'banner', 'season']).optional(),
-      url: z.string().url(),
-    });
-    const { title, tab = 'poster', url } = schema.parse(req.body);
-    const items = await loadLibrary();
-    const it = items.find((x) => x.title === title);
-    if (!it) return { ok: false, error: 'not_found' };
-    if (tab === 'poster') (it as any).posterUrl = url;
-    if (tab === 'background') (it as any).backgroundUrl = url;
-    await saveLibrary(items);
-    return { ok: true, item: it };
-  });
+  app.post(
+    '/api/library/artwork',
+    { preHandler: requireAdmin },
+    async (req) => {
+      const schema = z.object({
+        title: z.string(),
+        tab: z.enum(['poster', 'background', 'banner', 'season']).optional(),
+        url: z.string().url(),
+      });
+      const { title, tab = 'poster', url } = schema.parse(req.body);
+      const items = await loadLibrary();
+      const it = items.find((x) => x.title === title);
+      if (!it) return { ok: false, error: 'not_found' };
+      if (tab === 'poster') (it as any).posterUrl = url;
+      if (tab === 'background') (it as any).backgroundUrl = url;
+      await saveLibrary(items);
+      return { ok: true, item: it };
+    }
+  );
 
-  app.patch('/api/library/:id', async (req) => {
+  app.patch('/api/library/:id', { preHandler: requireAdmin }, async (req) => {
     const id = (req.params as any).id as string;
     const schema = z.object({
       kind: z.enum(['movie', 'series', 'music', 'book']).optional(),
@@ -141,7 +151,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, item: next };
   });
 
-  app.delete('/api/library/:id', async (req) => {
+  app.delete('/api/library/:id', { preHandler: requireAdmin }, async (req) => {
     const id = (req.params as any).id as string;
     const items = await loadLibrary();
     const idx = items.findIndex((x) => x.id === id);

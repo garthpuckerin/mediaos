@@ -4,6 +4,8 @@ import path from 'path';
 import type { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 
+import { authenticate, requireAdmin } from '../middleware/auth';
+
 type Indexer = {
   id: string;
   name: string;
@@ -18,9 +20,9 @@ const indexers: Indexer[] = [
 ];
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/', async () => ({ indexers }));
+  app.get('/', { preHandler: authenticate }, async () => ({ indexers }));
 
-  app.post('/', async (req) => {
+  app.post('/', { preHandler: requireAdmin }, async (req) => {
     const schema = z.object({
       name: z.string(),
       type: z.enum(['torrent', 'usenet']),
@@ -38,7 +40,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, indexer: ix };
   });
 
-  app.post('/search', async (req) => {
+  app.post('/search', { preHandler: authenticate }, async (req) => {
     const schema = z.object({
       q: z.string().min(2),
       cat: z.string().optional(),
@@ -198,7 +200,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, results };
   });
 
-  app.patch('/:id', async (req) => {
+  app.patch('/:id', { preHandler: requireAdmin }, async (req) => {
     const id = (req.params as any).id as string;
     const schema = z.object({
       enabled: z.boolean().optional(),
@@ -214,7 +216,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, indexer: ix };
   });
 
-  app.delete('/:id', async (req) => {
+  app.delete('/:id', { preHandler: requireAdmin }, async (req) => {
     const id = (req.params as any).id as string;
     const idx = indexers.findIndex((x) => x.id === id);
     if (idx === -1) return { ok: false, error: 'not_found' };

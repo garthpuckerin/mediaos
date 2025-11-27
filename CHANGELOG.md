@@ -9,6 +9,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Complete JWT Authentication System (Phase 2 - PR #46)**
+  - AES-256-GCM encryption service for sensitive credentials (passwords, API keys)
+  - PBKDF2 key derivation (100k iterations) with automatic credential encryption
+  - JWT token generation with HMAC-SHA256 signing
+  - Access tokens (15 min expiry) and refresh tokens (7 day expiry)
+  - File-based user store with bcrypt password hashing and RBAC (admin/user roles)
+  - Authentication routes: register, login, refresh, logout
+  - 56 comprehensive tests covering encryption, JWT, and user management
+  - Environment variables: JWT_SECRET and ENCRYPTION_KEY
+
+- **API Route Protection & Rate Limiting (Phase 3 - PR #47)**
+  - JWT authentication middleware protecting all API routes
+  - Granular per-route rate limiting (100/min general, 20/min search, 5/min auth, 30/min downloads)
+  - Per-IP tracking with automatic cleanup
+  - Protected routes: library, indexers, downloads, wanted, activity, settings
+  - Admin-only endpoints for sensitive operations (settings updates)
+  - Brute-force protection on authentication endpoints
+
+- **App.tsx Component Refactoring (PR #45)**
+  - Reduced App.tsx from 3,761 lines to 876 lines (77% reduction)
+  - Extracted 16 specialized components with proper separation of concerns
+  - Centralized routing utilities and toast notification system
+  - Improved maintainability and code organization
+
 - Comprehensive AI guardrails with documentation synchronization standards
 - Branch management strategy with GitHub integration
 - CODEOWNERS file for automated review assignments
