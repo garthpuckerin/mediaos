@@ -161,7 +161,7 @@ export async function authenticateUser(
   // Update last login
   const users = await loadUsers();
   if (users[user.id]) {
-    users[user.id].lastLoginAt = new Date().toISOString();
+    users[user.id]!.lastLoginAt = new Date().toISOString();
     await saveUsers(users);
   }
 

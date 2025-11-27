@@ -127,7 +127,7 @@ export function verifyToken(token: string): JWTPayload {
   // Decode payload
   let payload: JWTPayload;
   try {
-    const payloadBuffer = base64urlDecode(encodedPayload);
+    const payloadBuffer = base64urlDecode(encodedPayload!);
     payload = JSON.parse(payloadBuffer.toString('utf8'));
   } catch (error) {
     throw new Error('Token verification failed: Invalid payload');
@@ -154,12 +154,12 @@ export function generateAccessToken(
   email?: string,
   role?: string
 ): string {
+  const payload: Omit<JWTPayload, 'iat' | 'exp'> = { sub: userId };
+  if (email !== undefined) payload.email = email;
+  if (role !== undefined) payload.role = role;
+
   return signToken(
-    {
-      sub: userId,
-      email,
-      role,
-    },
+    payload,
     15 * 60 // 15 minutes
   );
 }

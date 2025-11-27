@@ -77,7 +77,7 @@ describe('User Store Service', () => {
       // Read file directly to check password is hashed
       const raw = await fs.readFile(USERS_FILE, 'utf8');
       const users = JSON.parse(raw);
-      const userId = Object.keys(users)[0];
+      const userId = Object.keys(users)[0]!;
 
       expect(users[userId].passwordHash).toBeTruthy();
       expect(users[userId].passwordHash).not.toBe(password);
@@ -277,7 +277,7 @@ describe('User Store Service', () => {
       const users = await listUsers();
 
       expect(users.length).toBe(3);
-      expect(users[0].email).toBeTruthy();
+      expect(users[0]!.email).toBeTruthy();
       expect(users[0]).not.toHaveProperty('passwordHash');
     });
 

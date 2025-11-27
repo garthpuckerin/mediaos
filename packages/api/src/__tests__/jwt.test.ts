@@ -255,7 +255,7 @@ describe('JWT Service', () => {
 
     it('should use HS256 algorithm in header', () => {
       const token = signToken({ sub: 'user123' }, 3600);
-      const headerB64 = token.split('.')[0];
+      const headerB64 = token.split('.')[0]!;
 
       // Decode header
       const padding = '='.repeat((4 - (headerB64.length % 4)) % 4);
