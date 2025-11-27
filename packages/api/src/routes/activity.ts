@@ -1,12 +1,11 @@
 import { qbittorrent, sabnzbd } from '@mediaos/adapters/src/downloaders';
 import type { FastifyPluginAsync } from 'fastify';
 
-import { authenticate } from '../middleware/auth';
 import { loadGrabs } from '../services/grabStore';
 import { loadDownloadersWithCredentials } from './settings';
 
 const plugin: FastifyPluginAsync = async (app) => {
-  app.get('/api/activity/queue', { preHandler: authenticate }, async () => {
+  app.get('/api/activity/queue', async () => {
     const map = await loadGrabs();
     const items = Object.values(map || {})
       .filter((it: any) => !!it && typeof it === 'object')
@@ -28,7 +27,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, items };
   });
 
-  app.get('/api/activity/history', { preHandler: authenticate }, async () => {
+  app.get('/api/activity/history', async () => {
     const map = await loadGrabs();
     const snap = Object.values(map || {})
       .filter((it: any) => !!it && typeof it === 'object')
@@ -79,7 +78,7 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, items };
   });
 
-  app.get('/api/activity/live', { preHandler: authenticate }, async () => {
+  app.get('/api/activity/live', async () => {
     const cfg = await loadDownloadersWithCredentials();
     const out: any[] = [];
     // qBittorrent
@@ -148,60 +147,46 @@ const plugin: FastifyPluginAsync = async (app) => {
     return { ok: true, items: out };
   });
 
-  app.post(
-    '/api/activity/action',
-    { preHandler: authenticate },
-    async (req) => {
-      const b = (req.body || {}) as any;
-      const client = String(b.client || '').toLowerCase();
-      const op = String(b.op || '').toLowerCase() as
-        | 'pause'
-        | 'resume'
-        | 'delete';
-      const id = String(b.id || '');
-      if (!client || !op || !id) return { ok: false, error: 'missing_params' };
-      const cfg = await loadDownloadersWithCredentials();
-      try {
-        if (client === 'qbittorrent') {
-          const c = cfg.qbittorrent || {};
-          const r = await qbittorrent.action(op, id, {
-            baseUrl: String(c.baseUrl || ''),
-            username: c.username || undefined,
-            password: c.password || undefined,
-            timeoutMs:
-              typeof c.timeoutMs === 'number' ? c.timeoutMs : undefined,
-          });
-          return r.ok
-            ? { ok: true }
-            : {
-                ok: false,
-                error: r.error || 'action_failed',
-                status: r.status,
-              };
-        }
-        if (client === 'sabnzbd') {
-          const c = cfg.sabnzbd || {};
-          const r = await sabnzbd.action(op, id, {
-            baseUrl: String(c.baseUrl || ''),
-            apiKey: String(c.apiKey || ''),
-            timeoutMs:
-              typeof c.timeoutMs === 'number' ? c.timeoutMs : undefined,
-            category: c.category || undefined,
-          });
-          return r.ok
-            ? { ok: true }
-            : {
-                ok: false,
-                error: r.error || 'action_failed',
-                status: r.status,
-              };
-        }
-        return { ok: false, error: 'unsupported_client' };
-      } catch (e) {
-        return { ok: false, error: (e as Error).message };
+  app.post('/api/activity/action', async (req) => {
+    const b = (req.body || {}) as any;
+    const client = String(b.client || '').toLowerCase();
+    const op = String(b.op || '').toLowerCase() as
+      | 'pause'
+      | 'resume'
+      | 'delete';
+    const id = String(b.id || '');
+    if (!client || !op || !id) return { ok: false, error: 'missing_params' };
+    const cfg = await loadDownloadersWithCredentials();
+    try {
+      if (client === 'qbittorrent') {
+        const c = cfg.qbittorrent || {};
+        const r = await qbittorrent.action(op, id, {
+          baseUrl: String(c.baseUrl || ''),
+          username: c.username || undefined,
+          password: c.password || undefined,
+          timeoutMs: typeof c.timeoutMs === 'number' ? c.timeoutMs : undefined,
+        });
+        return r.ok
+          ? { ok: true }
+          : { ok: false, error: r.error || 'action_failed', status: r.status };
       }
+      if (client === 'sabnzbd') {
+        const c = cfg.sabnzbd || {};
+        const r = await sabnzbd.action(op, id, {
+          baseUrl: String(c.baseUrl || ''),
+          apiKey: String(c.apiKey || ''),
+          timeoutMs: typeof c.timeoutMs === 'number' ? c.timeoutMs : undefined,
+          category: c.category || undefined,
+        });
+        return r.ok
+          ? { ok: true }
+          : { ok: false, error: r.error || 'action_failed', status: r.status };
+      }
+      return { ok: false, error: 'unsupported_client' };
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
     }
-  );
+  });
 };
 
 export default plugin;
