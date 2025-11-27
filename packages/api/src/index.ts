@@ -25,11 +25,15 @@ import verifyJobsRoutes from './routes/verifyJobs';
 import verifySettingsRoutes from './routes/verifySettings';
 import wantedRoutes from './routes/wanted';
 import { validateConfigWithWarnings } from './services/config';
+import { validateOrExit } from './services/envValidation';
 import { loadDownloadersWithCredentials } from './routes/settings';
 
 // Load environment variables from root directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
+// Validate environment variables on startup
+validateOrExit();
 
 // Create Fastify instance
 const app = Fastify({

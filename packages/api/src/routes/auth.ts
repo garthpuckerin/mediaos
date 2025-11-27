@@ -5,6 +5,7 @@ import {
   verifyToken,
   extractTokenFromHeader,
 } from '../services/jwt';
+import { validatePassword } from '../services/passwordValidation';
 import {
   authenticateUser,
   createUser,
@@ -32,10 +33,15 @@ const plugin: FastifyPluginAsync = async (app) => {
       });
     }
 
-    if (!password || password.length < 8) {
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
       return reply.code(400).send({
         ok: false,
-        error: 'Password must be at least 8 characters',
+        error:
+          passwordValidation.errors[0] || 'Password does not meet requirements',
+        errors: passwordValidation.errors,
+        strength: passwordValidation.strength,
       });
     }
 
