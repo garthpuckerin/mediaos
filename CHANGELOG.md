@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Weekly/monthly/quarterly documentation review cycles
 - **Sprint Planning & Roadmap document with 15-sprint development plan**
 - Comprehensive integration tests for settings API (GET/POST endpoints, persistence, validation)
+- **Package-aware pre-push hook for monorepo optimization**
+  - Only runs lint/type-check/tests for affected workspaces
+  - Automatically detects changed packages via git diff
+  - Cross-platform support (Windows + Unix)
+  - Performance: Single package changes now ~5-10s vs ~30s full repo check
 
 ### Changed
 
@@ -31,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced quality gates with documentation validation
 - **Improved TypeScript type safety in settings.ts - replaced `any` types with proper type definitions**
 - **Reduced ESLint warnings from 192 to 182 (-5.2%) through type safety improvements**
+- Pre-push hook now package-aware for faster validation
 
 ### Fixed
 
@@ -40,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Settings configuration now respects CONFIG_DIR environment variable for test isolation**
 - **Security: SABnzbd API key no longer exposed in GET responses (properly sanitized)**
 - **Settings test endpoint now validates required client parameter and client type**
+- **API tsconfig allows cross-package imports (removed rootDir constraint)**
 
 ### Tests
 
@@ -54,6 +61,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added environment variable validation
 - Enhanced branch protection with security requirements
 - Settings API properly sanitizes sensitive data (passwords, API keys) in responses
+
+### Performance
+
+- Package-aware prepush reduces validation time from ~30s to ~5-10s for single package changes
+
+## [0.3.1] - 2025-11-26
+
+### Security
+
+- **CRITICAL**: Fixed SABnzbd API key exposure in GET /api/settings/downloaders responses
+
+### Added
+
+- Comprehensive integration tests for settings API (20 tests, 100% pass rate)
+- Settings test endpoint now validates required client parameter and client type
+- Test isolation support via CONFIG_DIR environment variable
+
+### Changed
+
+- Improved TypeScript type safety in settings.ts - replaced 11 `any` types with proper type definitions
+- Reduced ESLint warnings from 192 to 182 (-5.2%) through type safety improvements
+- Settings downloader enabled status now properly inferred from baseUrl presence
+
+### Fixed
+
+- Settings configuration respects CONFIG_DIR environment variable for test isolation
+- API tsconfig allows cross-package imports (removed rootDir constraint)
+- API response structure properly documented and tested
+- Import order corrections for lint compliance
 
 ## [0.3.0] - 2025-10-28
 
