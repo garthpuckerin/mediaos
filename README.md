@@ -37,16 +37,21 @@ cd mediaos
 # 2) Install dependencies
 npm install
 
+# 3) Generate security keys
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # JWT_SECRET
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"  # ENCRYPTION_KEY
+
 # 4) Setup environment
-cp env.example .env
-# Edit .env with your configuration
+cp .env.example .env
+# Edit .env and add the generated keys:
+# JWT_SECRET=your-generated-jwt-secret
+# ENCRYPTION_KEY=your-generated-encryption-key
 
-# 5) Setup database
-npm run db:migrate
-npm run db:seed
-
-# 6) Start development servers
+# 5) Start development servers
 npm run dev
+
+# 6) Register first user (automatically becomes admin)
+# Visit http://localhost:5173 and use the registration form
 ```
 
 ### Production Build (npm)
@@ -125,22 +130,42 @@ npm run test:e2e
 
 ## 📚 Documentation
 
-- [Product Requirements Document](PRD.md) - Complete feature specifications
-- [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
-- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
+### Getting Started
+
+- [Authentication Guide](docs/AUTHENTICATION.md) - Complete authentication setup and usage
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment with Docker
+- [API Reference](docs/API.md) - Complete API endpoint documentation
+
+### Development
+
 - [Development Setup](DEVELOPMENT.md) - Development environment guide
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
 - [AI Guardrails](AI_GUARDRAILS.md) - AI development standards and protocols
 - [Branch Management](BRANCH_MANAGEMENT.md) - Git workflow and branch strategy
+
+### Reference
+
+- [Product Requirements Document](PRD.md) - Complete feature specifications
+- [Architecture Documentation](ARCHITECTURE.md) - Technical architecture details
 - [Sprint Planning & Roadmap](SPRINT_PLANNING.md) - Development sprints and milestones
 - [Changelog](CHANGELOG.md) - Version history and changes
 
 ## 🔒 Security
 
-- **Authentication** - JWT tokens with RBAC
-- **Input Validation** - Zod schema validation
-- **Rate Limiting** - Built-in protection against abuse
-- **Security Scanning** - Automated vulnerability scanning
-- **Secrets Management** - Secure credential handling
+- **Authentication** - JWT-based authentication with access/refresh tokens (see [Authentication Guide](docs/AUTHENTICATION.md))
+- **Encryption** - AES-256-GCM encryption for sensitive credentials
+- **Password Hashing** - PBKDF2 with SHA-512 (100k iterations)
+- **Role-Based Access Control** - Admin and user roles with protected routes
+- **Rate Limiting** - Per-route rate limiting (5 req/min for auth, 100 req/min general)
+- **Input Validation** - Comprehensive request validation
+- **Secrets Management** - Environment-based secrets with Docker support
+
+**Required Environment Variables:**
+
+- `JWT_SECRET` - 64-character hex string for signing JWT tokens
+- `ENCRYPTION_KEY` - 64-character hex string for encrypting credentials
+
+See [Authentication Guide](docs/AUTHENTICATION.md) for complete setup instructions.
 
 ## 🚀 CI/CD Pipeline
 
