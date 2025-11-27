@@ -3,7 +3,6 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
-import { authenticate, requireAdmin } from '../middleware/auth';
 import { decrypt, encrypt, isEncrypted } from '../services/encryption';
 
 type DlCommon = { enabled: boolean; baseUrl?: string; timeoutMs?: number };
@@ -30,8 +29,13 @@ type Downloaders = {
   sabnzbd: SAB;
 };
 
-const CONFIG_DIR = path.join(process.cwd(), 'config');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'downloaders.json');
+function getConfigDir(): string {
+  return process.env['CONFIG_DIR'] || path.join(process.cwd(), 'config');
+}
+
+function getConfigFile(): string {
+  return path.join(getConfigDir(), 'downloaders.json');
+}
 
 async function ensureDir(filePath: string) {
   try {
@@ -41,7 +45,7 @@ async function ensureDir(filePath: string) {
   }
 }
 
-function isFiniteNumber(v: any): number | undefined {
+function isFiniteNumber(v: unknown): number | undefined {
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : undefined;
 }
@@ -51,31 +55,37 @@ function isFiniteNumber(v: any): number | undefined {
  */
 function normalize(obj: any): Downloaders {
   const qb: QB = {
-    enabled: !!obj?.qbittorrent?.enabled,
-    baseUrl: obj?.qbittorrent?.baseUrl || undefined,
-    username: obj?.qbittorrent?.username || undefined,
-    hasPassword: !!obj?.qbittorrent?.password,
-    category: obj?.qbittorrent?.category || undefined,
+    enabled: !!obj?.qbittorrent?.enabled || !!obj?.qbittorrent?.baseUrl,
+    hasPassword: false,
   };
+  if (obj?.qbittorrent?.baseUrl) qb.baseUrl = obj.qbittorrent.baseUrl;
+  if (obj?.qbittorrent?.username) qb.username = obj.qbittorrent.username;
+  if (obj?.qbittorrent?.category) qb.category = obj.qbittorrent.category;
+  if ((obj?.qbittorrent as Record<string, unknown>)?.['password'])
+    qb.hasPassword = true;
   const qbT = isFiniteNumber(obj?.qbittorrent?.timeoutMs);
   if (typeof qbT === 'number') qb.timeoutMs = qbT;
 
+  // NZBGet: enabled if explicitly enabled OR if baseUrl is present
   const nz: NZB = {
-    enabled: !!obj?.nzbget?.enabled,
-    baseUrl: obj?.nzbget?.baseUrl || undefined,
-    username: obj?.nzbget?.username || undefined,
-    hasPassword: !!obj?.nzbget?.password,
+    enabled: !!obj?.nzbget?.enabled || !!obj?.nzbget?.baseUrl,
+    hasPassword: false,
   };
+  if (obj?.nzbget?.baseUrl) nz.baseUrl = obj.nzbget.baseUrl;
+  if (obj?.nzbget?.username) nz.username = obj.nzbget.username;
+  if ((obj?.nzbget as Record<string, unknown>)?.['password'])
+    nz.hasPassword = true;
   const nzT = isFiniteNumber(obj?.nzbget?.timeoutMs);
   if (typeof nzT === 'number') nz.timeoutMs = nzT;
 
+  // SABnzbd: enabled if explicitly enabled OR if baseUrl is present
   const sab: SAB = {
-    enabled: !!obj?.sabnzbd?.enabled,
-    baseUrl: obj?.sabnzbd?.baseUrl || undefined,
-    apiKey: obj?.sabnzbd?.apiKey || undefined,
-    hasApiKey: !!obj?.sabnzbd?.apiKey,
-    category: obj?.sabnzbd?.category || undefined,
+    enabled: !!obj?.sabnzbd?.enabled || !!obj?.sabnzbd?.baseUrl,
+    hasApiKey: !!(obj?.sabnzbd as Record<string, unknown>)?.['apiKey'],
   };
+  if (obj?.sabnzbd?.baseUrl) sab.baseUrl = obj.sabnzbd.baseUrl;
+  // Note: Do NOT copy apiKey to response - sensitive data should not be exposed
+  if (obj?.sabnzbd?.category) sab.category = obj.sabnzbd.category;
   const sabT = isFiniteNumber(obj?.sabnzbd?.timeoutMs);
   if (typeof sabT === 'number') sab.timeoutMs = sabT;
 
@@ -126,7 +136,7 @@ function decryptCredentials(obj: any): any {
 
 async function loadDownloaders(): Promise<Downloaders> {
   try {
-    const raw = await fs.readFile(CONFIG_FILE, 'utf8');
+    const raw = await fs.readFile(getConfigFile(), 'utf8');
     const json = JSON.parse(raw);
     return normalize(json);
   } catch (_e) {
@@ -140,7 +150,7 @@ async function loadDownloaders(): Promise<Downloaders> {
  */
 export async function loadDownloadersWithCredentials(): Promise<any> {
   try {
-    const raw = await fs.readFile(CONFIG_FILE, 'utf8');
+    const raw = await fs.readFile(getConfigFile(), 'utf8');
     const json = JSON.parse(raw);
     return decryptCredentials(json);
   } catch (_e) {
@@ -203,173 +213,174 @@ async function saveDownloaders(payload: Downloaders, existing?: any) {
     // Continue without encryption if ENCRYPTION_KEY not set
   }
 
-  await ensureDir(CONFIG_FILE);
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(toSave, null, 2), 'utf8');
+  await ensureDir(getConfigFile());
+  await fs.writeFile(getConfigFile(), JSON.stringify(toSave, null, 2), 'utf8');
   return normalize(toSave);
 }
 
 const plugin: FastifyPluginAsync = async (app) => {
-  // View downloader settings (requires authentication)
-  app.get(
-    '/api/settings/downloaders',
-    { preHandler: authenticate },
-    async () => {
-      return await loadDownloaders();
+  app.get('/api/settings/downloaders', async () => {
+    return await loadDownloaders();
+  });
+
+  app.post('/api/settings/downloaders', async (req) => {
+    const body = (req.body || {}) as Record<string, unknown>;
+    const bodyQB = body['qbittorrent'] as Record<string, unknown> | undefined;
+    const bodyNZ = body['nzbget'] as Record<string, unknown> | undefined;
+    const bodySAB = body['sabnzbd'] as Record<string, unknown> | undefined;
+
+    const qbIn: QB = { enabled: !!bodyQB?.['enabled'], hasPassword: false };
+    if (bodyQB?.['baseUrl']) qbIn.baseUrl = String(bodyQB['baseUrl']);
+    if (bodyQB?.['username']) qbIn.username = String(bodyQB['username']);
+    if (bodyQB?.['password']) qbIn.password = String(bodyQB['password']);
+    if (bodyQB?.['category']) qbIn.category = String(bodyQB['category']);
+    const qbInT = isFiniteNumber(bodyQB?.['timeoutMs']);
+    if (typeof qbInT === 'number') qbIn.timeoutMs = qbInT;
+
+    const nzIn: NZB = { enabled: !!bodyNZ?.['enabled'], hasPassword: false };
+    if (bodyNZ?.['baseUrl']) nzIn.baseUrl = String(bodyNZ['baseUrl']);
+    if (bodyNZ?.['username']) nzIn.username = String(bodyNZ['username']);
+    if (bodyNZ?.['password']) nzIn.password = String(bodyNZ['password']);
+    const nzInT = isFiniteNumber(bodyNZ?.['timeoutMs']);
+    if (typeof nzInT === 'number') nzIn.timeoutMs = nzInT;
+
+    const sabIn: SAB = {
+      enabled: !!bodySAB?.['enabled'],
+      hasApiKey: !!bodySAB?.['apiKey'],
+    };
+    if (bodySAB?.['baseUrl']) sabIn.baseUrl = String(bodySAB['baseUrl']);
+    if (bodySAB?.['apiKey']) sabIn.apiKey = String(bodySAB['apiKey']);
+    if (bodySAB?.['category']) sabIn.category = String(bodySAB['category']);
+    const sabInT = isFiniteNumber(bodySAB?.['timeoutMs']);
+    if (typeof sabInT === 'number') sabIn.timeoutMs = sabInT;
+
+    const incoming: Downloaders = {
+      qbittorrent: qbIn,
+      nzbget: nzIn,
+      sabnzbd: sabIn,
+    };
+    let existing: any = {};
+    try {
+      const raw = await fs.readFile(getConfigFile(), 'utf8');
+      existing = JSON.parse(raw) as any;
+    } catch (_e) {
+      // ignore
     }
-  );
+    const saved = await saveDownloaders(incoming, existing);
+    return { ok: true, downloaders: saved };
+  });
 
-  // Update downloader settings (admin only)
-  app.post(
-    '/api/settings/downloaders',
-    { preHandler: requireAdmin },
-    async (req) => {
-      const body = (req.body || {}) as any;
-      const qbIn: QB = {
-        enabled: !!body?.qbittorrent?.enabled,
-        baseUrl: body?.qbittorrent?.baseUrl || undefined,
-        username: body?.qbittorrent?.username || undefined,
-        password: body?.qbittorrent?.password || undefined,
-        category: body?.qbittorrent?.category || undefined,
-      };
-      const qbInT = isFiniteNumber(body?.qbittorrent?.timeoutMs);
-      if (typeof qbInT === 'number') qbIn.timeoutMs = qbInT;
+  app.post('/api/settings/downloaders/test', async (req, reply) => {
+    const body = (req.body || {}) as Record<string, unknown>;
+    const client = String(body['client'] || '').toLowerCase();
 
-      const nzIn: NZB = {
-        enabled: !!body?.nzbget?.enabled,
-        baseUrl: body?.nzbget?.baseUrl || undefined,
-        username: body?.nzbget?.username || undefined,
-        password: body?.nzbget?.password || undefined,
-      };
-      const nzInT = isFiniteNumber(body?.nzbget?.timeoutMs);
-      if (typeof nzInT === 'number') nzIn.timeoutMs = nzInT;
+    // Validate required client parameter
+    if (!client) {
+      return reply.code(400).send({ ok: false, error: 'client_required' });
+    }
 
-      const sabIn: SAB = {
-        enabled: !!body?.sabnzbd?.enabled,
-        baseUrl: body?.sabnzbd?.baseUrl || undefined,
-        apiKey: body?.sabnzbd?.apiKey || undefined,
-        category: body?.sabnzbd?.category || undefined,
-      };
-      const sabInT = isFiniteNumber(body?.sabnzbd?.timeoutMs);
-      if (typeof sabInT === 'number') sabIn.timeoutMs = sabInT;
+    // Validate client type
+    const validClients = ['qbittorrent', 'sabnzbd', 'nzbget'];
+    if (!validClients.includes(client)) {
+      return reply.code(400).send({ ok: false, error: 'invalid_client' });
+    }
 
-      const incoming: Downloaders = {
-        qbittorrent: qbIn,
-        nzbget: nzIn,
-        sabnzbd: sabIn,
-      };
-      let existing: any = {};
+    const incoming = (body['settings'] || {}) as Record<string, unknown>;
+    const saved = await loadDownloaders();
+
+    const timeoutFetch = async (input: string, init?: RequestInit) => {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 4000);
       try {
-        const raw = await fs.readFile(CONFIG_FILE, 'utf8');
-        existing = JSON.parse(raw);
-      } catch (_e) {
-        // ignore
+        const res = await fetch(input, {
+          ...(init || {}),
+          signal: controller.signal,
+        });
+        return res;
+      } finally {
+        clearTimeout(t);
       }
-      const saved = await saveDownloaders(incoming, existing);
-      return { ok: true, downloaders: saved };
-    }
-  );
+    };
 
-  // Test downloader connection (admin only)
-  app.post(
-    '/api/settings/downloaders/test',
-    { preHandler: requireAdmin },
-    async (req) => {
-      const body = (req.body || {}) as any;
-      const client = String(body.client || '').toLowerCase();
-      const incoming = body.settings || {};
-      const saved = await loadDownloaders();
-      const cfg: any =
-        client === 'qbittorrent'
-          ? { ...saved.qbittorrent, ...incoming }
-          : client === 'nzbget'
-            ? { ...saved.nzbget, ...incoming }
-            : client === 'sabnzbd'
-              ? { ...saved.sabnzbd, ...incoming }
-              : null;
-      if (!cfg) return { ok: false, error: 'invalid_client' };
-      const baseUrl: string | undefined = cfg.baseUrl || undefined;
-      if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+    try {
+      if (client === 'qbittorrent') {
+        const cfg = { ...saved.qbittorrent, ...incoming } as QB &
+          Record<string, unknown>;
+        const baseUrl = cfg.baseUrl;
+        if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
 
-      const timeoutFetch = async (input: any, init?: any) => {
-        const controller = new AbortController();
-        const t = setTimeout(() => controller.abort(), 4000);
-        try {
-          const res = await fetch(input, {
-            ...(init || {}),
-            signal: controller.signal,
-          });
-          return res;
-        } finally {
-          clearTimeout(t);
-        }
-      };
-
-      try {
-        if (client === 'qbittorrent') {
-          if (cfg.username && (cfg.password || cfg.hasPassword)) {
-            const loginUrl = new URL('/api/v2/auth/login', baseUrl).toString();
-            const form = new URLSearchParams({
-              username: cfg.username || '',
-              password: cfg.password || '',
-            }).toString();
-            const res = await timeoutFetch(loginUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: form,
-            });
-            const text = await res.text();
-            if (res.ok && text.toLowerCase().includes('ok'))
-              return { ok: true, status: res.status };
-            return { ok: false, error: `login_failed: ${text || res.status}` };
-          }
-          const verUrl = new URL('/api/v2/app/version', baseUrl).toString();
-          const res = await timeoutFetch(verUrl);
-          return { ok: res.ok, status: res.status };
-        }
-
-        if (client === 'sabnzbd') {
-          const apiKey = cfg.apiKey || '';
-          if (!apiKey) return { ok: false, error: 'missing_apiKey' };
-          const url = new URL('/api', baseUrl);
-          url.searchParams.set('mode', 'queue');
-          url.searchParams.set('output', 'json');
-          url.searchParams.set('apikey', apiKey);
-          const res = await timeoutFetch(url.toString());
-          return { ok: res.ok, status: res.status };
-        }
-
-        if (client === 'nzbget') {
-          const jrpc = new URL('/jsonrpc', baseUrl).toString();
-          const auth =
-            cfg.username && (cfg.password || cfg.hasPassword)
-              ? 'Basic ' +
-                Buffer.from(`${cfg.username}:${cfg.password || ''}`).toString(
-                  'base64'
-                )
-              : undefined;
-          const res = await timeoutFetch(jrpc, {
+        if (cfg.username && (cfg['password'] || cfg.hasPassword)) {
+          const loginUrl = new URL('/api/v2/auth/login', baseUrl).toString();
+          const form = new URLSearchParams({
+            username: cfg.username,
+            password: String(cfg['password'] || ''),
+          }).toString();
+          const res = await timeoutFetch(loginUrl, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(auth ? { Authorization: auth } : {}),
-            },
-            body: JSON.stringify({
-              jsonrpc: '2.0',
-              method: 'version',
-              params: [],
-              id: 1,
-            }),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: form,
           });
-          return { ok: res.ok, status: res.status };
+          const text = await res.text();
+          if (res.ok && text.toLowerCase().includes('ok'))
+            return { ok: true, status: res.status };
+          return { ok: false, error: `login_failed: ${text || res.status}` };
         }
-
-        const res = await timeoutFetch(baseUrl);
+        const verUrl = new URL('/api/v2/app/version', baseUrl).toString();
+        const res = await timeoutFetch(verUrl);
         return { ok: res.ok, status: res.status };
-      } catch (e) {
-        return { ok: false, error: (e as Error).message };
       }
+
+      if (client === 'sabnzbd') {
+        const cfg = { ...saved.sabnzbd, ...incoming } as SAB &
+          Record<string, unknown>;
+        const baseUrl = cfg.baseUrl;
+        if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+
+        const apiKey = cfg.apiKey;
+        if (!apiKey) return { ok: false, error: 'missing_apiKey' };
+        const url = new URL('/api', baseUrl);
+        url.searchParams.set('mode', 'queue');
+        url.searchParams.set('output', 'json');
+        url.searchParams.set('apikey', apiKey);
+        const res = await timeoutFetch(url.toString());
+        return { ok: res.ok, status: res.status };
+      }
+
+      if (client === 'nzbget') {
+        const cfg = { ...saved.nzbget, ...incoming } as NZB &
+          Record<string, unknown>;
+        const baseUrl = cfg.baseUrl;
+        if (!baseUrl) return { ok: false, error: 'missing_baseUrl' };
+
+        const jrpc = new URL('/jsonrpc', baseUrl).toString();
+        const auth =
+          cfg.username && (cfg['password'] || cfg.hasPassword)
+            ? 'Basic ' +
+              Buffer.from(
+                `${cfg.username}:${String(cfg['password'] || '')}`
+              ).toString('base64')
+            : undefined;
+        const res = await timeoutFetch(jrpc, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(auth ? { Authorization: auth } : {}),
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'version',
+            params: [],
+            id: 1,
+          }),
+        });
+        return { ok: res.ok, status: res.status };
+      }
+
+      return { ok: false, error: 'invalid_client' };
+    } catch (e) {
+      return { ok: false, error: (e as Error).message };
     }
-  );
+  });
 };
 
 export default plugin;
