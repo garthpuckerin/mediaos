@@ -40,6 +40,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Password strength scoring system (weak/medium/strong ratings)
   - Comprehensive validation tests for environment and password security
 
+- **Testing Infrastructure (Phase 3)**
+  - Comprehensive authentication integration tests covering registration, login, refresh, logout
+  - Password validation integration tests with all strength requirements
+  - Email validation tests for registration endpoint
+  - 20+ test scenarios covering happy paths and edge cases
+
+- **Database Migration Planning (Phase 4)**
+  - Complete 12-week migration strategy from file-based storage to SQLite
+  - Dual-write pattern for zero-risk migration with rollback capability
+  - Comprehensive SQL schema with users, sessions, library, downloaders, indexers
+  - Performance optimization strategy with proper indexing and triggers
+  - Risk mitigation plan with validation and rollback procedures
+
 - **App.tsx Component Refactoring (PR #45)**
   - Reduced App.tsx from 3,761 lines to 876 lines (77% reduction)
   - Extracted 16 specialized components with proper separation of concerns
