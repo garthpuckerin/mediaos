@@ -62,7 +62,7 @@ export default [
       ...tsPlugin.configs.recommended.rules,
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_' },
+        { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
@@ -98,6 +98,7 @@ export default [
     files: ['scripts/**/*.{js,ts}', '**/*.cjs'],
     rules: {
       '@typescript-eslint/no-var-requires': 'off',
+      '@typescript-eslint/no-require-imports': 'off',
     },
   },
 
@@ -118,8 +119,16 @@ export default [
         sessionStorage: 'readonly',
         fetch: 'readonly',
         HTMLElement: 'readonly',
+        HTMLFormElement: 'readonly',
+        HTMLButtonElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        HTMLImageElement: 'readonly',
         Event: 'readonly',
         EventTarget: 'readonly',
+        CustomEvent: 'readonly',
+        File: 'readonly',
+        alert: 'readonly',
+        confirm: 'readonly',
       },
     },
     plugins: {
@@ -157,6 +166,7 @@ export default [
         afterAll: 'readonly',
         beforeEach: 'readonly',
         afterEach: 'readonly',
+        global: 'writable',
       },
     },
     rules: {
