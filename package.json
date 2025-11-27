@@ -1,6 +1,7 @@
 {
   "name": "mediaos",
   "private": true,
+  "type": "module",
   "version": "0.3.0",
   "description": "Unified media management platform replacing the arr ecosystem",
   "keywords": [
@@ -45,8 +46,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "type-check": "tsc --noEmit",
-    "prepush": "node scripts/prepush.js",
-    "verify:filenames": "node scripts/verify-filenames.js",
+    "prepush": "node scripts/prepush.cjs",
+    "verify:filenames": "node scripts/verify-filenames.cjs",
     "clean": "rimraf packages/*/dist packages/*/node_modules node_modules",
     "prepare": "husky install",
     "db:migrate": "npm run db:migrate -w @mediaos/api",
