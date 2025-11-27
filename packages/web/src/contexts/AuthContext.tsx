@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  type ReactNode,
+} from 'react';
 
 export interface User {
   id: string;
@@ -34,7 +40,9 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [refreshTokenValue, setRefreshTokenValue] = useState<string | null>(null);
+  const [refreshTokenValue, setRefreshTokenValue] = useState<string | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   // Load tokens from localStorage on mount
@@ -60,12 +68,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (!accessToken || !refreshTokenValue) return;
 
     // Refresh after 14 minutes (before 15-minute expiry)
-    const refreshInterval = setInterval(() => {
-      refreshTokenWithValue(refreshTokenValue).catch(() => {
-        // If refresh fails, log out
-        logout();
-      });
-    }, 14 * 60 * 1000);
+    const refreshInterval = setInterval(
+      () => {
+        refreshTokenWithValue(refreshTokenValue).catch(() => {
+          // If refresh fails, log out
+          logout();
+        });
+      },
+      14 * 60 * 1000
+    );
 
     return () => clearInterval(refreshInterval);
   }, [accessToken, refreshTokenValue]);

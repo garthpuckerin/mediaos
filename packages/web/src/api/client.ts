@@ -50,7 +50,9 @@ class ApiClient {
     }
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      const error = await response
+        .json()
+        .catch(() => ({ error: 'Request failed' }));
       throw new Error(error.error || `HTTP ${response.status}`);
     }
 
@@ -63,17 +65,15 @@ class ApiClient {
   }
 
   async post<T = any>(endpoint: string, data?: any): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+    const options: RequestInit = { method: 'POST' };
+    if (data) options.body = JSON.stringify(data);
+    return this.request<T>(endpoint, options);
   }
 
   async patch<T = any>(endpoint: string, data?: any): Promise<T> {
-    return this.request<T>(endpoint, {
-      method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
-    });
+    const options: RequestInit = { method: 'PATCH' };
+    if (data) options.body = JSON.stringify(data);
+    return this.request<T>(endpoint, options);
   }
 
   async delete<T = any>(endpoint: string): Promise<T> {
@@ -92,7 +92,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Upload failed' }));
+      const error = await response
+        .json()
+        .catch(() => ({ error: 'Upload failed' }));
       throw new Error(error.error || `HTTP ${response.status}`);
     }
 

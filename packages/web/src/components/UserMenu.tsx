@@ -59,18 +59,20 @@ export function UserMenu() {
         onClick={() => setIsOpen(!isOpen)}
         onBlur={() => setTimeout(() => setIsOpen(false), 200)}
       >
-        <span style={{
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          background: user.role === 'admin' ? '#3b82f6' : '#6b7280',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '12px',
-          fontWeight: '600',
-        }}>
-          {user.email[0].toUpperCase()}
+        <span
+          style={{
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: user.role === 'admin' ? '#3b82f6' : '#6b7280',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '12px',
+            fontWeight: '600',
+          }}
+        >
+          {user.email[0]!.toUpperCase()}
         </span>
         <span>{user.email}</span>
         <span style={{ fontSize: '10px', opacity: 0.7 }}>▼</span>
@@ -83,7 +85,13 @@ export function UserMenu() {
             onMouseEnter={() => setHoverIndex(0)}
             onMouseLeave={() => setHoverIndex(null)}
           >
-            <div style={{ fontSize: '12px', color: '#9ca3af', marginBottom: '4px' }}>
+            <div
+              style={{
+                fontSize: '12px',
+                color: '#9ca3af',
+                marginBottom: '4px',
+              }}
+            >
               Role
             </div>
             <div style={{ fontWeight: '600' }}>
@@ -100,11 +108,13 @@ export function UserMenu() {
               logout();
             }}
           >
-            <div style={{
-              color: '#ef4444',
-              fontWeight: '600',
-              textAlign: 'center',
-            }}>
+            <div
+              style={{
+                color: '#ef4444',
+                fontWeight: '600',
+                textAlign: 'center',
+              }}
+            >
               Sign Out
             </div>
           </div>

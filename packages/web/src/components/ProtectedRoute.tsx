@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginForm } from './LoginForm';
 
@@ -27,7 +27,10 @@ const errorStyle: React.CSSProperties = {
   textAlign: 'center',
 };
 
-export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
+export function ProtectedRoute({
+  children,
+  requireAdmin = false,
+}: ProtectedRouteProps) {
   const { user, isLoading, logout } = useAuth();
 
   if (isLoading) {
