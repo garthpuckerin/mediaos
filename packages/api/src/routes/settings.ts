@@ -3,6 +3,8 @@ import path from 'path';
 
 import type { FastifyPluginAsync } from 'fastify';
 
+import { decrypt, encrypt, isEncrypted } from '../services/encryption';
+
 type DlCommon = { enabled: boolean; baseUrl?: string; timeoutMs?: number };
 type QB = DlCommon & {
   username?: string;
@@ -48,16 +50,10 @@ function isFiniteNumber(v: unknown): number | undefined {
   return Number.isFinite(n) ? Math.trunc(n) : undefined;
 }
 
-type PartialDownloaders = {
-  qbittorrent?: Partial<QB>;
-  nzbget?: Partial<NZB>;
-  sabnzbd?: Partial<SAB>;
-};
-
-function normalize(obj: unknown): Downloaders {
-  const input = obj as PartialDownloaders;
-
-  // qBittorrent: enabled if explicitly enabled OR if baseUrl is present
+/**
+ * Normalizes downloader config for API responses (no credentials)
+ */
+function normalize(obj: any): Downloaders {
   const qb: QB = {
     enabled: !!input?.qbittorrent?.enabled || !!input?.qbittorrent?.baseUrl,
     hasPassword: false,
@@ -96,6 +92,48 @@ function normalize(obj: unknown): Downloaders {
   return { qbittorrent: qb, nzbget: nz, sabnzbd: sab };
 }
 
+/**
+ * Decrypts credentials from stored config
+ */
+function decryptCredentials(obj: any): any {
+  const result = JSON.parse(JSON.stringify(obj)); // deep clone
+
+  // Decrypt qBittorrent password
+  if (result?.qbittorrent?.password) {
+    try {
+      if (isEncrypted(result.qbittorrent.password)) {
+        result.qbittorrent.password = decrypt(result.qbittorrent.password);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt qBittorrent password:', error);
+    }
+  }
+
+  // Decrypt NZBGet password
+  if (result?.nzbget?.password) {
+    try {
+      if (isEncrypted(result.nzbget.password)) {
+        result.nzbget.password = decrypt(result.nzbget.password);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt NZBGet password:', error);
+    }
+  }
+
+  // Decrypt SABnzbd API key
+  if (result?.sabnzbd?.apiKey) {
+    try {
+      if (isEncrypted(result.sabnzbd.apiKey)) {
+        result.sabnzbd.apiKey = decrypt(result.sabnzbd.apiKey);
+      }
+    } catch (error) {
+      console.error('Failed to decrypt SABnzbd API key:', error);
+    }
+  }
+
+  return result;
+}
+
 async function loadDownloaders(): Promise<Downloaders> {
   try {
     const raw = await fs.readFile(getConfigFile(), 'utf8');
@@ -106,16 +144,21 @@ async function loadDownloaders(): Promise<Downloaders> {
   }
 }
 
-type SavedDownloaders = {
-  qbittorrent?: { password?: string };
-  nzbget?: { password?: string };
-  sabnzbd?: Record<string, unknown>;
-};
+/**
+ * Loads downloader config with decrypted credentials for internal use
+ * @returns Raw config object with decrypted passwords/API keys
+ */
+export async function loadDownloadersWithCredentials(): Promise<any> {
+  try {
+    const raw = await fs.readFile(CONFIG_FILE, 'utf8');
+    const json = JSON.parse(raw);
+    return decryptCredentials(json);
+  } catch (_e) {
+    return {};
+  }
+}
 
-async function saveDownloaders(
-  payload: Downloaders,
-  existing?: SavedDownloaders
-) {
+async function saveDownloaders(payload: Downloaders, existing?: any) {
   const toSave = {
     qbittorrent: {
       enabled: !!payload.qbittorrent.enabled,
@@ -146,9 +189,32 @@ async function saveDownloaders(
       timeoutMs: isFiniteNumber(payload.sabnzbd.timeoutMs),
       category: payload.sabnzbd.category || undefined,
     },
-  };
-  await ensureDir(getConfigFile());
-  await fs.writeFile(getConfigFile(), JSON.stringify(toSave, null, 2), 'utf8');
+  } as any;
+
+  // Encrypt sensitive fields before saving
+  try {
+    if (
+      toSave.qbittorrent.password &&
+      !isEncrypted(toSave.qbittorrent.password)
+    ) {
+      toSave.qbittorrent.password = encrypt(toSave.qbittorrent.password);
+    }
+    if (toSave.nzbget.password && !isEncrypted(toSave.nzbget.password)) {
+      toSave.nzbget.password = encrypt(toSave.nzbget.password);
+    }
+    if (toSave.sabnzbd.apiKey && !isEncrypted(toSave.sabnzbd.apiKey)) {
+      toSave.sabnzbd.apiKey = encrypt(toSave.sabnzbd.apiKey);
+    }
+  } catch (error) {
+    console.warn(
+      '⚠️  Encryption failed, credentials will be stored in plain text:',
+      error
+    );
+    // Continue without encryption if ENCRYPTION_KEY not set
+  }
+
+  await ensureDir(CONFIG_FILE);
+  await fs.writeFile(CONFIG_FILE, JSON.stringify(toSave, null, 2), 'utf8');
   return normalize(toSave);
 }
 
