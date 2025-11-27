@@ -61,7 +61,7 @@ function detectBase() {
   const upstream = trySh(
     'git rev-parse --abbrev-ref --symbolic-full-name @{u}'
   );
-  let baseRef = upstream || 'origin/main';
+  const baseRef = upstream || 'origin/main';
   // Compute merge-base for symmetric diff
   const mb = trySh(`git merge-base HEAD ${baseRef}`);
   return mb || baseRef;
