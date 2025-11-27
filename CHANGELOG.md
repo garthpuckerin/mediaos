@@ -66,6 +66,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Package-aware prepush reduces validation time from ~30s to ~5-10s for single package changes
 
+## [0.3.1] - 2025-11-26
+
+### Security
+
+- **CRITICAL**: Fixed SABnzbd API key exposure in GET /api/settings/downloaders responses
+
+### Added
+
+- Comprehensive integration tests for settings API (20 tests, 100% pass rate)
+- Settings test endpoint now validates required client parameter and client type
+- Test isolation support via CONFIG_DIR environment variable
+
+### Changed
+
+- Improved TypeScript type safety in settings.ts - replaced 11 `any` types with proper type definitions
+- Reduced ESLint warnings from 192 to 182 (-5.2%) through type safety improvements
+- Settings downloader enabled status now properly inferred from baseUrl presence
+
+### Fixed
+
+- Settings configuration respects CONFIG_DIR environment variable for test isolation
+- API tsconfig allows cross-package imports (removed rootDir constraint)
+- API response structure properly documented and tested
+- Import order corrections for lint compliance
+
 ## [0.3.0] - 2025-10-28
 
 ### Added
