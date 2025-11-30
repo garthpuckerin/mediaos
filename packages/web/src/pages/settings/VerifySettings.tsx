@@ -1,28 +1,13 @@
 import React from 'react';
 import { pushToast } from '../../utils/toast';
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 8,
-  border: '1px solid #1f2937',
-  background: '#0b1220',
-  color: '#e5e7eb',
-};
-
-const buttonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 8,
-  border: '1px solid #1f2937',
-  background: '#0b1220',
-  color: '#e5e7eb',
-};
-
-const fieldsetStyle: React.CSSProperties = {
-  border: '1px solid #1f2937',
-  borderRadius: 8,
-  padding: 8,
-};
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/Card';
 
 export function VerifySettings() {
   const [settings, setSettings] = React.useState<any | null>(null);
@@ -44,9 +29,11 @@ export function VerifySettings() {
   const bitrate = current.minBitrateKbpsByHeight || {};
 
   return (
-    <section>
-      <h2>Settings - Verification</h2>
-      {!settings && <p style={{ color: '#9aa4b2' }}>Loading…</p>}
+    <section className="max-w-4xl">
+      <h2 className="mb-6 text-2xl font-bold text-white">
+        Settings - Verification
+      </h2>
+      {!settings && <p className="text-gray-400">Loading…</p>}
       {settings && (
         <form
           onSubmit={async (e) => {
@@ -84,89 +71,81 @@ export function VerifySettings() {
               setSaving(false);
             }
           }}
-          style={{ display: 'grid', gap: 16, maxWidth: 520 }}
+          className="space-y-6"
         >
-          <fieldset style={fieldsetStyle}>
-            <legend style={{ padding: '0 6px' }}>Basics</legend>
-            <label>
-              <div style={{ fontSize: 12, color: '#9aa4b2' }}>
-                Min Duration (sec)
-              </div>
-              <input
-                name="minDurationSec"
-                type="number"
-                min={1}
-                defaultValue={current.minDurationSec}
-                style={inputStyle}
-              />
-            </label>
-            <label>
-              <div style={{ fontSize: 12, color: '#9aa4b2' }}>
-                Allowed Containers (comma-separated)
-              </div>
-              <input
-                name="allowedContainers"
-                defaultValue={(current.allowedContainers || []).join(', ')}
-                placeholder="mp4, mkv"
-                style={inputStyle}
-              />
-            </label>
-          </fieldset>
+          <Card>
+            <CardHeader>
+              <CardTitle>Basics</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="space-y-1.5 block">
+                <div className="text-xs text-gray-400">Min Duration (sec)</div>
+                <Input
+                  name="minDurationSec"
+                  type="number"
+                  min={1}
+                  defaultValue={current.minDurationSec}
+                />
+              </label>
+              <label className="space-y-1.5 block">
+                <div className="text-xs text-gray-400">
+                  Allowed Containers (comma-separated)
+                </div>
+                <Input
+                  name="allowedContainers"
+                  defaultValue={(current.allowedContainers || []).join(', ')}
+                  placeholder="mp4, mkv"
+                />
+              </label>
+            </CardContent>
+          </Card>
 
-          <fieldset style={fieldsetStyle}>
-            <legend style={{ padding: '0 6px' }}>
-              Min Bitrate (kbps) by Height
-            </legend>
-            <div
-              style={{
-                display: 'grid',
-                gap: 8,
-                gridTemplateColumns: '1fr 1fr',
-              }}
-            >
-              <label>
-                <div style={{ fontSize: 12, color: '#9aa4b2' }}>480p</div>
-                <input
-                  name="br480"
-                  type="number"
-                  defaultValue={bitrate['480']}
-                  style={inputStyle}
-                />
-              </label>
-              <label>
-                <div style={{ fontSize: 12, color: '#9aa4b2' }}>720p</div>
-                <input
-                  name="br720"
-                  type="number"
-                  defaultValue={bitrate['720']}
-                  style={inputStyle}
-                />
-              </label>
-              <label>
-                <div style={{ fontSize: 12, color: '#9aa4b2' }}>1080p</div>
-                <input
-                  name="br1080"
-                  type="number"
-                  defaultValue={bitrate['1080']}
-                  style={inputStyle}
-                />
-              </label>
-              <label>
-                <div style={{ fontSize: 12, color: '#9aa4b2' }}>2160p</div>
-                <input
-                  name="br2160"
-                  type="number"
-                  defaultValue={bitrate['2160']}
-                  style={inputStyle}
-                />
-              </label>
-            </div>
-          </fieldset>
+          <Card>
+            <CardHeader>
+              <CardTitle>Min Bitrate (kbps) by Height</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="space-y-1.5 block">
+                  <div className="text-xs text-gray-400">480p</div>
+                  <Input
+                    name="br480"
+                    type="number"
+                    defaultValue={bitrate['480']}
+                  />
+                </label>
+                <label className="space-y-1.5 block">
+                  <div className="text-xs text-gray-400">720p</div>
+                  <Input
+                    name="br720"
+                    type="number"
+                    defaultValue={bitrate['720']}
+                  />
+                </label>
+                <label className="space-y-1.5 block">
+                  <div className="text-xs text-gray-400">1080p</div>
+                  <Input
+                    name="br1080"
+                    type="number"
+                    defaultValue={bitrate['1080']}
+                  />
+                </label>
+                <label className="space-y-1.5 block">
+                  <div className="text-xs text-gray-400">2160p</div>
+                  <Input
+                    name="br2160"
+                    type="number"
+                    defaultValue={bitrate['2160']}
+                  />
+                </label>
+              </div>
+            </CardContent>
+          </Card>
 
           <div>
-            <button type="submit" disabled={saving} style={buttonStyle}>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Saving…' : 'Save Verification Settings'}
-            </button>
+            </Button>
           </div>
         </form>
       )}

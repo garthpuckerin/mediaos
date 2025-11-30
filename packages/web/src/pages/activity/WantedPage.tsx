@@ -1,12 +1,6 @@
 import React from 'react';
-
-const buttonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 8,
-  border: '1px solid #1f2937',
-  background: '#0b1220',
-  color: '#e5e7eb',
-};
+import { Button } from '../../components/ui/Button';
+import { Card, CardContent } from '../../components/ui/Card';
 
 export function WantedPage() {
   const [items, setItems] = React.useState<any[]>([]);
@@ -17,6 +11,7 @@ export function WantedPage() {
     scannedAt: string;
     results: Array<{ key: string; found: number; grabbed: number }>;
   } | null>(null);
+
   const loadWanted = React.useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -81,94 +76,84 @@ export function WantedPage() {
   };
 
   return (
-    <section>
-      <h2>Activity - Wanted</h2>
-      {error && <p style={{ color: '#f87171' }}>{error}</p>}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <button
-          style={buttonStyle}
-          disabled={scanning}
-          onClick={() => handleScan(false)}
-        >
+    <section className="max-w-4xl">
+      <h2 className="mb-6 text-2xl font-bold text-white">Activity - Wanted</h2>
+      {error && <p className="mb-4 text-red-400">{error}</p>}
+
+      <div className="flex gap-4 mb-8">
+        <Button disabled={scanning} onClick={() => handleScan(false)}>
           {scanning ? 'Scanning...' : 'Scan Wanted'}
-        </button>
-        <button
-          style={buttonStyle}
+        </Button>
+        <Button
+          variant="secondary"
           disabled={scanning}
           onClick={() => handleScan(true)}
         >
           {scanning ? 'Scanning...' : 'Scan & Queue'}
-        </button>
+        </Button>
       </div>
+
       {scanSummary && (
-        <div
-          style={{
-            border: '1px solid #1f2937',
-            borderRadius: 8,
-            padding: 8,
-            marginBottom: 12,
-            background: '#0b1220',
-          }}
-        >
-          <div style={{ color: '#9aa4b2', fontSize: 12 }}>
-            Last scan: {new Date(scanSummary.scannedAt).toLocaleString()}
-          </div>
-          {scanSummary.results.length === 0 && (
-            <div style={{ color: '#9aa4b2' }}>Nothing found.</div>
-          )}
-          {scanSummary.results.length > 0 && (
-            <ul
-              style={{ margin: 0, padding: '8px 0 0 18px', color: '#e5e7eb' }}
-            >
-              {scanSummary.results.map((row) => (
-                <li key={row.key} style={{ marginBottom: 4 }}>
-                  <strong>{row.key}</strong>{' '}
-                  <span style={{ color: '#9aa4b2' }}>
-                    Found {row.found} - Queued {row.grabbed}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+        <Card className="mb-8 border-indigo-500/30 bg-indigo-950/10">
+          <CardContent className="p-4">
+            <div className="text-xs text-gray-400 mb-2">
+              Last scan: {new Date(scanSummary.scannedAt).toLocaleString()}
+            </div>
+            {scanSummary.results.length === 0 && (
+              <div className="text-gray-400">Nothing found.</div>
+            )}
+            {scanSummary.results.length > 0 && (
+              <ul className="space-y-1 text-gray-200">
+                {scanSummary.results.map((row) => (
+                  <li key={row.key} className="text-sm">
+                    <strong className="font-medium">{row.key}</strong>{' '}
+                    <span className="text-gray-500">
+                      — Found {row.found}, Queued {row.grabbed}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {loading && <p className="text-gray-400">Loading...</p>}
+
+      {!loading && items.length === 0 && (
+        <div className="text-gray-500 text-center py-12 border border-dashed border-gray-800 rounded-xl">
+          Nothing in Wanted list.
         </div>
       )}
-      {loading && <p style={{ color: '#9aa4b2' }}>Loading.</p>}
-      {!loading && items.length === 0 && (
-        <p style={{ color: '#9aa4b2' }}>Nothing in Wanted.</p>
-      )}
+
       {!loading && items.length > 0 && (
-        <div style={{ display: 'grid', gap: 8 }}>
+        <div className="grid gap-4">
           {items.map((it) => (
-            <div
-              key={`${it.kind}:${it.id}`}
-              style={{
-                border: '1px solid #1f2937',
-                borderRadius: 8,
-                padding: 8,
-              }}
-            >
-              <div style={{ color: '#9aa4b2', fontSize: 12 }}>{it.kind}</div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>{it.title}</div>
-                <button
-                  style={buttonStyle}
+            <Card key={`${it.kind}:${it.id}`}>
+              <CardContent className="p-4 flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">
+                    {it.kind}
+                  </div>
+                  <div className="text-lg font-semibold text-white truncate">
+                    {it.title}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {it.lastScan
+                      ? `Last scan ${new Date(it.lastScan.at).toLocaleString()} — Found ${it.lastScan.found}, Queued ${it.lastScan.grabbed}`
+                      : 'Not scanned yet'}
+                  </div>
+                </div>
+
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={() => removeItem(it.kind, it.id)}
                 >
                   Remove
-                </button>
-              </div>
-              <div style={{ marginTop: 6, color: '#9aa4b2', fontSize: 12 }}>
-                {it.lastScan
-                  ? `Last scan ${new Date(it.lastScan.at).toLocaleString()} - Found ${it.lastScan.found} - Queued ${it.lastScan.grabbed}`
-                  : 'Not scanned yet'}
-              </div>
-            </div>
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

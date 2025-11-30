@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "user": {
+    "id": "user_1764264056029_h7p9837gr",
+    "email": "admin@mediaos.local",
+    "role": "admin",
+    "createdAt": "2025-11-27T17:20:56.065Z",
+    "updatedAt": "2025-11-27T17:20:56.065Z"
+  },
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzE3NjQyNjQwNTYwMjlfaDdwOTgzN2dyIiwiZW1haWwiOiJhZG1pbkBtZWRpYW9zLmxvY2FsIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY0MjY0MDY4LCJleHAiOjE3NjQyNjQ5Njh9.4X77qjxttVqfE9ouO-SpHL4_5-OpFlGIZaGdGSEqsV4",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyXzE3NjQyNjQwNTYwMjlfaDdwOTgzN2dyIiwiaWF0IjoxNzY0MjY0MDY4LCJleHAiOjE3NjQ4Njg4Njh9.0g73nQSaw-yUh82Y7NX-kTyE88D1VgnLSXw_zdNMgFQ"
+}

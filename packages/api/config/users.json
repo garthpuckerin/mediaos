@@ -1,0 +1,11 @@
+{
+  "user_1764264056029_h7p9837gr": {
+    "id": "user_1764264056029_h7p9837gr",
+    "email": "admin@mediaos.local",
+    "passwordHash": "52fc00a86a9f82c23cb58fe21bb2eb13:4b88213e3dcfbae6ce3b00ce74718d2a1ce5e69807f932d42db4548504ad9bf58d0cd026b296de87369f20f06be7f14b02d8e797d166df3b01d947f38e087e7f",
+    "role": "admin",
+    "createdAt": "2025-11-27T17:20:56.065Z",
+    "updatedAt": "2025-11-27T17:20:56.065Z",
+    "lastLoginAt": "2025-11-30T06:58:05.435Z"
+  }
+}

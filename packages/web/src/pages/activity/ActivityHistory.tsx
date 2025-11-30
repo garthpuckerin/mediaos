@@ -1,18 +1,14 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { pushToast } from '../../utils/toast';
-
-const buttonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 8,
-  border: '1px solid #1f2937',
-  background: '#0b1220',
-  color: '#e5e7eb',
-};
+import { Button } from '../../components/ui/Button';
+import { Card, CardContent } from '../../components/ui/Card';
 
 export function ActivityHistory() {
   const [items, setItems] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
   React.useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -35,51 +31,46 @@ export function ActivityHistory() {
       clearInterval(id);
     };
   }, []);
+
   const toPlural = (k: string) =>
     k === 'movie' ? 'movies' : k === 'book' ? 'books' : k;
+
   return (
-    <section>
-      <h2>Activity - History</h2>
-      {error && <p style={{ color: '#f87171' }}>{error}</p>}
-      {loading && <p style={{ color: '#9aa4b2' }}>Loading.</p>}
-      {!loading && items.length === 0 && (
-        <p style={{ color: '#9aa4b2' }}>History is empty.</p>
+    <section className="max-w-4xl">
+      <h2 className="mb-6 text-2xl font-bold text-white">Activity - History</h2>
+      {error && <p className="mb-4 text-red-400">{error}</p>}
+      {loading && items.length === 0 && (
+        <p className="text-gray-400">Loading...</p>
       )}
-      {!loading && items.length > 0 && (
-        <div style={{ display: 'grid', gap: 8 }}>
+
+      {!loading && items.length === 0 && (
+        <div className="text-gray-500 text-center py-12 border border-dashed border-gray-800 rounded-xl">
+          History is empty.
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <div className="grid gap-4">
           {items.map((it, i) => (
-            <div
-              key={i}
-              style={{
-                border: '1px solid #1f2937',
-                borderRadius: 8,
-                padding: 8,
-              }}
-            >
-              <div style={{ color: '#9aa4b2', fontSize: 12 }}>
-                {new Date(it.at || Date.now()).toLocaleString()} •{' '}
-                {it.kind || '-'} • {it.client || 'client'}
-              </div>
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <div
-                  style={{
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {it.title}
+            <Card key={i}>
+              <CardContent className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">
+                    {new Date(it.at || Date.now()).toLocaleString()} •{' '}
+                    {it.kind || '-'} • {it.client || 'client'}
+                  </div>
+                  <div
+                    className="text-lg font-semibold text-white truncate"
+                    title={it.title}
+                  >
+                    {it.title}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    style={buttonStyle}
+
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="secondary"
+                    size="sm"
                     onClick={async () => {
                       try {
                         const libRes = await fetch('/api/library');
@@ -118,24 +109,20 @@ export function ActivityHistory() {
                     }}
                   >
                     Verify again
-                  </button>
+                  </Button>
+
                   {it.id && it.kind && (
-                    <a
-                      href={`#/library/${toPlural(String(it.kind))}/item/${encodeURIComponent(it.id)}`}
-                      style={
-                        {
-                          ...buttonStyle,
-                          textDecoration: 'none',
-                          display: 'inline-block',
-                        } as any
-                      }
+                    <Link
+                      to={`/library/${toPlural(String(it.kind))}/item/${encodeURIComponent(it.id)}`}
                     >
-                      Open
-                    </a>
+                      <Button variant="secondary" size="sm">
+                        Open
+                      </Button>
+                    </Link>
                   )}
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

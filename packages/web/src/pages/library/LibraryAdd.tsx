@@ -1,4 +1,5 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import { pushToast } from '../../utils/toast';
 
 const inputStyle: React.CSSProperties = {
@@ -18,7 +19,17 @@ const buttonStyle: React.CSSProperties = {
   color: '#e5e7eb',
 };
 
-export function LibraryAdd({ kindLabel }: { kindLabel: string }) {
+export function LibraryAdd() {
+  const { kind: kindParam } = useParams<{ kind: string }>();
+  const kind = kindParam || 'series';
+  const kindLabel =
+    kind === 'movies'
+      ? 'Movie'
+      : kind === 'series'
+        ? 'Series'
+        : kind === 'books'
+          ? 'Book'
+          : 'Music';
   return (
     <section>
       <h2>Add New {kindLabel}</h2>

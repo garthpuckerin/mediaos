@@ -29,13 +29,7 @@ export default function AppWrapper() {
 
   return (
     <ProtectedRoute>
-      <div style={{ minHeight: '100vh', background: '#0b0f16' }}>
-        <header style={headerStyle}>
-          <h1 style={logoStyle}>MediaOS</h1>
-          <UserMenu />
-        </header>
-        <App />
-      </div>
+      <App />
     </ProtectedRoute>
   );
 }

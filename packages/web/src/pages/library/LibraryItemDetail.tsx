@@ -1,41 +1,35 @@
 import React from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import type { KindKey } from '../../utils/routing';
 import { pushToast } from '../../utils/toast';
+import { useArtwork } from '../../contexts/ArtworkContext';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../../components/ui/Card';
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '8px 10px',
-  borderRadius: 8,
-  border: '1px solid #1f2937',
-  background: '#0b1220',
-  color: '#e5e7eb',
-};
+export function LibraryItemDetail() {
+  const { kind: kindParam, id: idParam } = useParams<{
+    kind: string;
+    id: string;
+  }>();
+  const kind = (kindParam || 'series') as KindKey;
+  const id = idParam || '';
+  const navigate = useNavigate();
+  const { openArtwork } = useArtwork();
 
-const buttonStyle: React.CSSProperties = {
-  padding: '8px 12px',
-  borderRadius: 8,
-  border: '1px solid #1f2937',
-  background: '#0b1220',
-  color: '#e5e7eb',
-};
+  const [settings, setSettings] = React.useState<any>(null);
 
-const fieldsetStyle: React.CSSProperties = {
-  border: '1px solid #1f2937',
-  borderRadius: 8,
-  padding: 8,
-};
-
-export function LibraryItemDetail({
-  kind,
-  id,
-  settings,
-  onOpenArtwork,
-}: {
-  kind: KindKey;
-  id: string;
-  settings: any;
-  onOpenArtwork: (title: string) => void;
-}) {
+  React.useEffect(() => {
+    fetch('/api/settings/downloaders')
+      .then((r) => r.json())
+      .then((j) => setSettings(j.downloaders || {}))
+      .catch(() => {});
+  }, []);
   const [item, setItem] = React.useState<any | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -216,7 +210,10 @@ export function LibraryItemDetail({
       pushToast('success', 'Item updated');
       if (payload.kind && toPlural(payload.kind) !== kind) {
         // Navigate to new kind path with same id
-        window.location.hash = `#/library/${toPlural(payload.kind)}/item/${encodeURIComponent(id)}`;
+        navigate(
+          `/library/${toPlural(payload.kind)}/item/${encodeURIComponent(id)}`,
+          { replace: true }
+        );
       }
     } catch (e) {
       pushToast('error', (e as Error).message || 'Update failed');
@@ -259,7 +256,7 @@ export function LibraryItemDetail({
         },
       });
       // Navigate back to the list for current kind
-      window.location.hash = `#/library/${kind}/list`;
+      navigate(`/library/${kind}/list`);
     } catch (e) {
       pushToast('error', (e as Error).message || 'Delete failed');
     } finally {
@@ -319,44 +316,33 @@ export function LibraryItemDetail({
       {error && <div style={{ color: '#f87171' }}>{error}</div>}
       {loading && <div style={{ color: '#9aa4b2' }}>Loading…</div>}
       {!loading && (
-        <div
-          style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 16 }}
-        >
-          <div>
-            <div
-              style={{
-                width: '100%',
-                border: '1px solid #1f2937',
-                borderRadius: 12,
-                overflow: 'hidden',
-                background: '#0b1220',
-                height: 360,
-                display: 'grid',
-                placeItems: 'center',
-              }}
-            >
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+          <div className="space-y-4">
+            <div className="aspect-[2/3] w-full rounded-xl overflow-hidden border border-gray-800 bg-gray-950 relative group">
               {poster ? (
                 <img
                   src={poster}
                   alt={title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <span style={{ color: '#9aa4b2' }}>No artwork</span>
+                <div className="w-full h-full flex items-center justify-center text-gray-500">
+                  No artwork
+                </div>
               )}
             </div>
-            <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-              <button style={buttonStyle} onClick={() => onOpenArtwork(title)}>
+            <div className="flex flex-col gap-2">
+              <Button variant="secondary" onClick={() => openArtwork(title)}>
                 Manage Artwork
-              </button>
-              <button
-                style={buttonStyle}
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => pushToast('info', 'Manual search coming soon')}
               >
                 Manual Search
-              </button>
-              <button
-                style={buttonStyle}
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={async () => {
                   try {
                     const res = await fetch('/api/verify/check', {
@@ -385,9 +371,9 @@ export function LibraryItemDetail({
                 }}
               >
                 Verify Quality
-              </button>
-              <button
-                style={buttonStyle}
+              </Button>
+              <Button
+                variant="secondary"
                 disabled={
                   !!verifyJob &&
                   verifyJob.status !== 'completed' &&
@@ -457,9 +443,9 @@ export function LibraryItemDetail({
                 verifyJob.status !== 'failed'
                   ? 'Verifying...'
                   : 'Verify (Async)'}
-              </button>
-              <button
-                style={buttonStyle}
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={async () => {
                   try {
                     const res = await fetch('/api/wanted', {
@@ -476,245 +462,183 @@ export function LibraryItemDetail({
                 }}
               >
                 Add to Wanted
-              </button>
+              </Button>
             </div>
           </div>
           <div>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <h2 style={{ marginTop: 0 }}>{title}</h2>
+            <div className="flex items-center justify-between gap-4 mb-6">
+              <h2 className="text-2xl font-bold text-white m-0">{title}</h2>
               {!editMode && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={buttonStyle} onClick={() => setEditMode(true)}>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={() => setEditMode(true)}>
                     Edit
-                  </button>
-                  <button
-                    style={{
-                      ...buttonStyle,
-                      borderColor: '#7f1d1d',
-                      color: '#f87171',
-                    }}
+                  </Button>
+                  <Button
+                    variant="danger"
                     disabled={deleting}
                     onClick={onDelete}
                   >
                     {deleting ? 'Deleting...' : 'Delete'}
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
             {editMode && (
-              <div
-                style={{
-                  border: '1px solid #1f2937',
-                  borderRadius: 8,
-                  padding: 8,
-                  marginBottom: 12,
-                }}
-              >
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 180px',
-                    gap: 8,
-                  }}
-                >
-                  <label>
-                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Title</div>
-                    <input
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      style={inputStyle}
-                    />
-                  </label>
-                  <label>
-                    <div style={{ fontSize: 12, color: '#9aa4b2' }}>Kind</div>
-                    <select
-                      value={newKind}
-                      onChange={(e) => setNewKind(e.target.value as any)}
-                      style={{ ...inputStyle, padding: '6px 10px' }}
-                    >
-                      <option value="series">Series</option>
-                      <option value="movie">Movie</option>
-                      <option value="book">Book</option>
-                      <option value="music">Music</option>
-                    </select>
-                  </label>
-                </div>
-                <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                  <button
-                    style={buttonStyle}
-                    disabled={savingEdit}
-                    onClick={onSaveEdit}
-                  >
-                    {savingEdit ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    style={buttonStyle}
-                    onClick={() => {
-                      setEditMode(false);
-                      setNewTitle(String(item?.title || ''));
-                      setNewKind(String(item?.kind || 'series') as any);
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-            <div style={{ color: '#9aa4b2', marginBottom: 12 }}>
-              Kind: {kind}
-            </div>
-            <div
-              style={{
-                border: '1px solid #1f2937',
-                borderRadius: 8,
-                padding: 8,
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <strong>Quality Verification</strong>
-                <span style={{ color: '#9aa4b2', fontSize: 12 }}>
-                  {lastVerify?.analyzedAt
-                    ? new Date(lastVerify.analyzedAt).toLocaleString()
-                    : 'No result'}
-                </span>
-              </div>
-              <div style={{ color: '#9aa4b2', marginTop: 6 }}>
-                {lastVerify
-                  ? `${(lastVerify.issues || []).length} issues — top severity: ${lastVerify.topSeverity || 'none'}`
-                  : 'Run Verify Quality to generate a report.'}
-              </div>
-              {lastVerify &&
-                Array.isArray(lastVerify.issues) &&
-                lastVerify.issues.length > 0 && (
-                  <ul style={{ marginTop: 8, paddingLeft: 18 }}>
-                    {lastVerify.issues.map((it: any, idx: number) => (
-                      <li key={idx} style={{ marginBottom: 4 }}>
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            padding: '2px 6px',
-                            borderRadius: 6,
-                            marginRight: 6,
-                            fontSize: 12,
-                            color: '#e5e7eb',
-                            background:
-                              it.severity === 'error'
-                                ? '#b91c1c'
-                                : it.severity === 'warn'
-                                  ? '#b45309'
-                                  : '#374151',
-                          }}
-                        >
-                          {String(it.severity || 'info').toUpperCase()}
-                        </span>
-                        <strong style={{ marginRight: 6 }}>
-                          {String(it.kind || 'unknown')}
-                        </strong>
-                        <span style={{ color: '#9aa4b2' }}>
-                          {String(it.message || '')}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-            </div>
-            <div
-              style={{
-                border: '1px solid #1f2937',
-                borderRadius: 8,
-                padding: 8,
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <strong>Last Grab</strong>
-                <span style={{ color: '#9aa4b2', fontSize: 12 }}>
-                  {lastGrab?.at
-                    ? new Date(lastGrab.at).toLocaleString()
-                    : 'No grab yet'}
-                </span>
-              </div>
-              <div style={{ color: '#9aa4b2', marginTop: 6 }}>
-                {lastGrab
-                  ? `Client: ${lastGrab.client || 'unknown'} - Protocol: ${lastGrab.protocol || '-'}`
-                  : 'Once a grab is queued, details will appear here.'}
-              </div>
-              {lastGrab && (
-                <div
-                  style={{
-                    marginTop: 6,
-                    display: 'flex',
-                    gap: 8,
-                    color: lastGrab.ok ? '#34d399' : '#f87171',
-                  }}
-                >
-                  <span>{lastGrab.ok ? 'Success' : 'Failed'}</span>
-                  {lastGrab.status && (
-                    <span style={{ color: '#9aa4b2' }}>
-                      Status: {lastGrab.status}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div style={{ marginTop: 8 }}>
-                <button
-                  style={buttonStyle}
-                  disabled={!lastGrab || !lastGrab.link}
-                  onClick={handleRegrab}
-                >
-                  Re-grab Last
-                </button>
-                {lastGrab &&
-                  String(lastGrab.client || '') === 'sabnzbd' &&
-                  settings?.sabnzbd?.baseUrl && (
-                    <button
-                      style={{ ...buttonStyle, marginLeft: 8 }}
+              <Card className="mb-6">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="grid grid-cols-[1fr_180px] gap-4">
+                    <label className="space-y-1.5">
+                      <div className="text-xs text-gray-400">Title</div>
+                      <Input
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                      />
+                    </label>
+                    <label className="space-y-1.5">
+                      <div className="text-xs text-gray-400">Kind</div>
+                      <select
+                        value={newKind}
+                        onChange={(e) => setNewKind(e.target.value as any)}
+                        className="flex h-10 w-full rounded-lg border border-gray-800 bg-gray-950 px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500"
+                      >
+                        <option value="series">Series</option>
+                        <option value="movie">Movie</option>
+                        <option value="book">Book</option>
+                        <option value="music">Music</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button disabled={savingEdit} onClick={onSaveEdit}>
+                      {savingEdit ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button
+                      variant="ghost"
                       onClick={() => {
-                        try {
-                          window.open(
-                            String(settings?.sabnzbd?.baseUrl || ''),
-                            '_blank'
-                          );
-                        } catch (_) {
-                          /* ignore */
-                        }
+                        setEditMode(false);
+                        setNewTitle(String(item?.title || ''));
+                        setNewKind(String(item?.kind || 'series') as any);
                       }}
                     >
-                      Open in SAB
-                    </button>
+                      Cancel
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            <div className="text-gray-400 mb-6 capitalize">Kind: {kind}</div>
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <strong className="text-white">Quality Verification</strong>
+                  <span className="text-xs text-gray-400">
+                    {lastVerify?.analyzedAt
+                      ? new Date(lastVerify.analyzedAt).toLocaleString()
+                      : 'No result'}
+                  </span>
+                </div>
+                <div className="text-gray-400 mb-4">
+                  {lastVerify
+                    ? `${(lastVerify.issues || []).length} issues — top severity: ${lastVerify.topSeverity || 'none'}`
+                    : 'Run Verify Quality to generate a report.'}
+                </div>
+                {lastVerify &&
+                  Array.isArray(lastVerify.issues) &&
+                  lastVerify.issues.length > 0 && (
+                    <ul className="pl-4 space-y-1">
+                      {lastVerify.issues.map((it: any, idx: number) => (
+                        <li key={idx} className="text-sm">
+                          <span
+                            className={`inline-block px-1.5 py-0.5 rounded text-xs mr-2 text-gray-200 ${
+                              it.severity === 'error'
+                                ? 'bg-red-700'
+                                : it.severity === 'warn'
+                                  ? 'bg-amber-700'
+                                  : 'bg-gray-700'
+                            }`}
+                          >
+                            {String(it.severity || 'info').toUpperCase()}
+                          </span>
+                          <strong className="mr-2 text-gray-300">
+                            {String(it.kind || 'unknown')}
+                          </strong>
+                          <span className="text-gray-400">
+                            {String(it.message || '')}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
-              </div>
-            </div>
-            <div
-              style={{
-                borderTop: '1px solid #1f2937',
-                paddingTop: 12,
-                marginTop: 12,
-              }}
-            >
-              <h3>NZB Upload (SAB)</h3>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <input
+              </CardContent>
+            </Card>
+
+            <Card className="mb-6">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-center mb-4">
+                  <strong className="text-white">Last Grab</strong>
+                  <span className="text-xs text-gray-400">
+                    {lastGrab?.at
+                      ? new Date(lastGrab.at).toLocaleString()
+                      : 'No grab yet'}
+                  </span>
+                </div>
+                <div className="text-gray-400 mb-4">
+                  {lastGrab
+                    ? `Client: ${lastGrab.client || 'unknown'} - Protocol: ${lastGrab.protocol || '-'}`
+                    : 'Once a grab is queued, details will appear here.'}
+                </div>
+                {lastGrab && (
+                  <div className="flex gap-4 mb-4">
+                    <span
+                      className={
+                        lastGrab.ok ? 'text-emerald-400' : 'text-red-400'
+                      }
+                    >
+                      {lastGrab.ok ? 'Success' : 'Failed'}
+                    </span>
+                    {lastGrab.status && (
+                      <span className="text-gray-400">
+                        Status: {lastGrab.status}
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    disabled={!lastGrab || !lastGrab.link}
+                    onClick={handleRegrab}
+                  >
+                    Re-grab Last
+                  </Button>
+                  {lastGrab &&
+                    String(lastGrab.client || '') === 'sabnzbd' &&
+                    settings?.sabnzbd?.baseUrl && (
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          try {
+                            window.open(
+                              String(settings?.sabnzbd?.baseUrl || ''),
+                              '_blank'
+                            );
+                          } catch (_) {
+                            /* ignore */
+                          }
+                        }}
+                      >
+                        Open in SAB
+                      </Button>
+                    )}
+                </div>
+              </CardContent>
+            </Card>
+            <div className="mt-8 pt-6 border-t border-gray-800">
+              <h3 className="text-lg font-semibold text-white mb-4">
+                NZB Upload (SAB)
+              </h3>
+              <div className="flex gap-4 mb-6">
+                <Input
                   type="file"
                   accept=".nzb,application/x-nzb"
                   onChange={(e) =>
@@ -724,10 +648,9 @@ export function LibraryItemDetail({
                         : null
                     )
                   }
-                  style={{ ...inputStyle, padding: 6 }}
+                  className="p-1 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700"
                 />
-                <button
-                  style={buttonStyle}
+                <Button
                   disabled={!nzbFile || nzbUploading}
                   onClick={async () => {
                     if (!nzbFile) return;
@@ -762,10 +685,12 @@ export function LibraryItemDetail({
                   }}
                 >
                   {nzbUploading ? 'Uploading...' : 'Upload NZB'}
-                </button>
+                </Button>
               </div>
 
-              <h3>Manual Search</h3>
+              <h3 className="text-lg font-semibold text-white mb-4">
+                Manual Search
+              </h3>
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -792,72 +717,44 @@ export function LibraryItemDetail({
                     setSearching(false);
                   }
                 }}
-                style={{ display: 'flex', gap: 8, marginBottom: 8 }}
+                className="flex gap-4 mb-4"
               >
-                <input
+                <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder={`Search releases for ${title}`}
-                  style={inputStyle}
                 />
-                <button style={buttonStyle} disabled={searching}>
+                <Button disabled={searching}>
                   {searching ? 'Searching…' : 'Search'}
-                </button>
+                </Button>
               </form>
-              <div style={{ margin: '4px 0 8px' }}>
-                <label
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
+              <div className="mb-4">
+                <label className="inline-flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={serverFilter}
                     onChange={(e) => setServerFilter(e.target.checked)}
+                    className="rounded border-gray-700 bg-gray-900 text-indigo-600 focus:ring-indigo-500/50"
                   />
-                  <span style={{ color: '#9aa4b2' }}>
+                  <span className="text-sm text-gray-400">
                     Server filter by Quality
                   </span>
                 </label>
               </div>
-              <div style={{ border: '1px solid #1f2937', borderRadius: 8 }}>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 120px 100px 100px',
-                    gap: 8,
-                    padding: 8,
-                    borderBottom: '1px solid #1f2937',
-                    color: '#9aa4b2',
-                    fontSize: 12,
-                  }}
-                >
+              <div className="border border-gray-800 rounded-xl overflow-hidden bg-gray-950">
+                <div className="grid grid-cols-[1fr_120px_100px_100px] gap-4 p-3 border-b border-gray-800 text-xs text-gray-400 font-medium">
                   <div>Title</div>
                   <div>Size</div>
                   <div>Seeders</div>
                   <div>Action</div>
                 </div>
-                <div>
+                <div className="divide-y divide-gray-800">
                   {results.map((r, idx) => (
                     <div
                       key={idx}
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 120px 100px 100px',
-                        gap: 8,
-                        padding: 8,
-                        borderBottom: '1px solid #1f2937',
-                      }}
+                      className="grid grid-cols-[1fr_120px_100px_100px] gap-4 p-3 items-center hover:bg-gray-900/50 transition-colors"
                     >
-                      <div
-                        style={{
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
+                      <div className="overflow-hidden text-ellipsis whitespace-nowrap text-sm text-gray-300">
                         {(() => {
                           const t = r.title || 'N/A';
                           const q = detectQuality(String(t));
@@ -883,25 +780,19 @@ export function LibraryItemDetail({
                               : true;
                           return (
                             <>
-                              {t}
+                              <span title={t}>{t}</span>
                               {q && (
-                                <span
-                                  style={{ color: '#9aa4b2', marginLeft: 6 }}
-                                >
+                                <span className="text-gray-500 ml-2 text-xs">
                                   [{q.toUpperCase()}]
                                 </span>
                               )}
                               {allowed && q && cutoff && !meetsCutoff && (
-                                <span
-                                  style={{ color: '#f59e0b', marginLeft: 8 }}
-                                >
+                                <span className="text-amber-500 ml-2 text-xs">
                                   below cutoff
                                 </span>
                               )}
                               {!allowed && (
-                                <span
-                                  style={{ color: '#ef4444', marginLeft: 8 }}
-                                >
+                                <span className="text-red-500 ml-2 text-xs">
                                   not allowed
                                 </span>
                               )}
@@ -909,13 +800,16 @@ export function LibraryItemDetail({
                           );
                         })()}
                       </div>
-                      <div style={{ color: '#9aa4b2' }}>{r.size || '-'}</div>
-                      <div style={{ color: '#9aa4b2' }}>
+                      <div className="text-sm text-gray-500">
+                        {r.size || '-'}
+                      </div>
+                      <div className="text-sm text-gray-500">
                         {typeof r.seeders === 'number' ? r.seeders : '-'}
                       </div>
                       <div>
-                        <button
-                          style={buttonStyle}
+                        <Button
+                          size="sm"
+                          variant="secondary"
                           onClick={async () => {
                             try {
                               const res = await fetch('/api/downloads/grab', {
@@ -962,30 +856,28 @@ export function LibraryItemDetail({
                           })()}
                         >
                           Grab
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
                   {results.length === 0 && (
-                    <div style={{ padding: 12, color: '#9aa4b2' }}>
-                      No results.
+                    <div className="p-8 text-center text-gray-500 text-sm">
+                      No results found.
                     </div>
                   )}
                 </div>
               </div>
             </div>
             {kind === 'series' && (
-              <div>
-                <h3>Seasons</h3>
-                <div style={{ display: 'grid', gap: 8 }}>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Seasons
+                </h3>
+                <div className="space-y-2">
                   {[1, 2, 3].map((s) => (
                     <div
                       key={s}
-                      style={{
-                        border: '1px solid #1f2937',
-                        borderRadius: 8,
-                        padding: 8,
-                      }}
+                      className="border border-gray-800 rounded-lg p-4 bg-gray-900/30 text-gray-400"
                     >
                       Season {s} — Episodes (placeholder)
                     </div>
@@ -994,25 +886,27 @@ export function LibraryItemDetail({
               </div>
             )}
             {kind === 'movies' && (
-              <div>
-                <h3>Releases</h3>
-                <div style={{ color: '#9aa4b2' }}>
-                  Releases list (placeholder)
-                </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Releases
+                </h3>
+                <div className="text-gray-500">Releases list (placeholder)</div>
               </div>
             )}
             {kind === 'music' && (
-              <div>
-                <h3>Albums / Tracks</h3>
-                <div style={{ color: '#9aa4b2' }}>
-                  Albums/tracks (placeholder)
-                </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Albums / Tracks
+                </h3>
+                <div className="text-gray-500">Albums/tracks (placeholder)</div>
               </div>
             )}
             {kind === 'books' && (
-              <div>
-                <h3>Volumes / Chapters</h3>
-                <div style={{ color: '#9aa4b2' }}>
+              <div className="mt-8">
+                <h3 className="text-lg font-semibold text-white mb-4">
+                  Volumes / Chapters
+                </h3>
+                <div className="text-gray-500">
                   Volumes/chapters (placeholder)
                 </div>
               </div>
@@ -1023,4 +917,3 @@ export function LibraryItemDetail({
     </section>
   );
 }
-
