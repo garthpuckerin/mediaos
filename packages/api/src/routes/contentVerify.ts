@@ -5,6 +5,12 @@ import {
   VerifyOptions,
   ContentVerifyResult,
 } from '../services/contentVerify.js';
+import {
+  scanFile as securityScanFile,
+  scanDirectory as securityScanDirectory,
+  quickSafetyCheck,
+} from '../services/securityScan.js';
+import { verifyQueue } from '../services/verifyQueue.js';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 
@@ -16,6 +22,20 @@ interface VerifyRequest {
   expectedDurationMax?: number;
   minBitrateKbps?: number;
   checkCorruption?: boolean;
+  checkSecurity?: boolean;
+}
+
+interface QueueJobRequest {
+  path: string;
+  type?: 'file' | 'folder';
+  options?: VerifyOptions;
+  priority?: number;
+  metadata?: {
+    title?: string;
+    kind?: string;
+    itemId?: string;
+    source?: 'download' | 'import' | 'manual' | 'scan';
+  };
 }
 
 interface BatchVerifyRequest {
@@ -233,6 +253,271 @@ export default async function contentVerifyRoutes(app: FastifyInstance) {
         passedCount,
         failedCount,
         totalIssues,
+        results,
+      });
+    }
+  );
+
+  // ==========================================
+  // Security Scan Routes
+  // ==========================================
+
+  /**
+   * POST /api/verify/security
+   * Security scan a single file
+   */
+  app.post(
+    '/api/verify/security',
+    async (
+      request: FastifyRequest<{ Body: { path: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { path: filePath } = request.body;
+
+      if (!filePath) {
+        return reply.code(400).send({ ok: false, error: 'Path is required' });
+      }
+
+      const resolvedPath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(process.cwd(), filePath);
+
+      const result = await securityScanFile(resolvedPath);
+
+      return reply.send(result);
+    }
+  );
+
+  /**
+   * POST /api/verify/security/folder
+   * Security scan a directory
+   */
+  app.post(
+    '/api/verify/security/folder',
+    async (
+      request: FastifyRequest<{
+        Body: { path: string; recursive?: boolean };
+      }>,
+      reply: FastifyReply
+    ) => {
+      const { path: folderPath, recursive = true } = request.body;
+
+      if (!folderPath) {
+        return reply.code(400).send({ ok: false, error: 'Path is required' });
+      }
+
+      const resolvedPath = path.isAbsolute(folderPath)
+        ? folderPath
+        : path.resolve(process.cwd(), folderPath);
+
+      const result = await securityScanDirectory(resolvedPath, recursive);
+
+      return reply.send(result);
+    }
+  );
+
+  /**
+   * POST /api/verify/security/quick
+   * Quick filename-based safety check
+   */
+  app.post(
+    '/api/verify/security/quick',
+    async (
+      request: FastifyRequest<{ Body: { filename: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { filename } = request.body;
+
+      if (!filename) {
+        return reply
+          .code(400)
+          .send({ ok: false, error: 'Filename is required' });
+      }
+
+      const result = quickSafetyCheck(filename);
+
+      return reply.send({ ok: true, ...result });
+    }
+  );
+
+  // ==========================================
+  // Verification Queue Routes
+  // ==========================================
+
+  /**
+   * GET /api/verify/queue
+   * Get queue status
+   */
+  app.get('/api/verify/queue', async (_request, reply: FastifyReply) => {
+    const status = verifyQueue.getStatus();
+    const jobs = verifyQueue.getAllJobs();
+
+    return reply.send({
+      ok: true,
+      ...status,
+      jobs: jobs.slice(0, 50), // Limit to 50 most recent
+    });
+  });
+
+  /**
+   * POST /api/verify/queue
+   * Add a job to the queue
+   */
+  app.post(
+    '/api/verify/queue',
+    async (
+      request: FastifyRequest<{ Body: QueueJobRequest }>,
+      reply: FastifyReply
+    ) => {
+      const {
+        path: filePath,
+        type = 'file',
+        options = {},
+        priority = 5,
+        metadata,
+      } = request.body;
+
+      if (!filePath) {
+        return reply.code(400).send({ ok: false, error: 'Path is required' });
+      }
+
+      const resolvedPath = path.isAbsolute(filePath)
+        ? filePath
+        : path.resolve(process.cwd(), filePath);
+
+      const jobId = verifyQueue.addJob(
+        type,
+        resolvedPath,
+        options,
+        metadata,
+        priority
+      );
+
+      return reply.send({
+        ok: true,
+        jobId,
+        message: 'Job added to queue',
+      });
+    }
+  );
+
+  /**
+   * POST /api/verify/queue/batch
+   * Add multiple files to the queue
+   */
+  app.post(
+    '/api/verify/queue/batch',
+    async (
+      request: FastifyRequest<{
+        Body: {
+          files: Array<{
+            path: string;
+            metadata?: QueueJobRequest['metadata'];
+          }>;
+          options?: VerifyOptions;
+          priority?: number;
+        };
+      }>,
+      reply: FastifyReply
+    ) => {
+      const { files, options = {}, priority = 5 } = request.body;
+
+      if (!files || files.length === 0) {
+        return reply.code(400).send({ ok: false, error: 'Files are required' });
+      }
+
+      const resolvedFiles = files.map((f) => ({
+        path: path.isAbsolute(f.path)
+          ? f.path
+          : path.resolve(process.cwd(), f.path),
+        metadata: f.metadata,
+      }));
+
+      const jobIds = verifyQueue.addBatch(resolvedFiles, options, priority);
+
+      return reply.send({
+        ok: true,
+        jobIds,
+        message: `${jobIds.length} jobs added to queue`,
+      });
+    }
+  );
+
+  /**
+   * GET /api/verify/queue/:id
+   * Get job status
+   */
+  app.get(
+    '/api/verify/queue/:id',
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { id } = request.params;
+      const job = verifyQueue.getJob(id);
+
+      if (!job) {
+        return reply.code(404).send({ ok: false, error: 'Job not found' });
+      }
+
+      return reply.send({ ok: true, job });
+    }
+  );
+
+  /**
+   * DELETE /api/verify/queue/:id
+   * Cancel a queued job
+   */
+  app.delete(
+    '/api/verify/queue/:id',
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { id } = request.params;
+      const cancelled = verifyQueue.cancelJob(id);
+
+      if (!cancelled) {
+        return reply.code(400).send({
+          ok: false,
+          error: 'Job cannot be cancelled (not queued or not found)',
+        });
+      }
+
+      return reply.send({ ok: true, message: 'Job cancelled' });
+    }
+  );
+
+  /**
+   * POST /api/verify/queue/clear
+   * Clear completed/failed jobs
+   */
+  app.post('/api/verify/queue/clear', async (_request, reply: FastifyReply) => {
+    const cleared = verifyQueue.clearCompleted();
+
+    return reply.send({
+      ok: true,
+      cleared,
+      message: `Cleared ${cleared} completed/failed jobs`,
+    });
+  });
+
+  /**
+   * GET /api/verify/queue/results
+   * Get summary of completed job results
+   */
+  app.get(
+    '/api/verify/queue/results',
+    async (_request, reply: FastifyReply) => {
+      const results = verifyQueue.getResults();
+      const passed = results.filter((r) => r.passed).length;
+      const failed = results.length - passed;
+
+      return reply.send({
+        ok: true,
+        total: results.length,
+        passed,
+        failed,
         results,
       });
     }

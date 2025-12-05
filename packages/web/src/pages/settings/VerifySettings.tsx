@@ -18,6 +18,13 @@ interface ContentVerifyResult {
     message: string;
     details?: Record<string, unknown>;
   }>;
+  securityIssues: Array<{
+    type: string;
+    severity: 'warning' | 'danger' | 'critical';
+    message: string;
+    file?: string;
+    details?: Record<string, unknown>;
+  }>;
   metadata: {
     duration?: number;
     width?: number;
@@ -31,6 +38,7 @@ interface ContentVerifyResult {
     fileSize?: number;
   };
   checks: {
+    securityCheck: 'pass' | 'fail' | 'skip';
     durationCheck: 'pass' | 'fail' | 'skip';
     aspectRatioCheck: 'pass' | 'fail' | 'skip';
     bitrateCheck: 'pass' | 'fail' | 'skip';
@@ -88,15 +96,28 @@ export function VerifySettings() {
           expectedQuality: expectedQuality || undefined,
           expectedDurationMin: toNum(expectedDuration),
           checkCorruption,
+          checkSecurity: true, // Always check for malware
         }),
       });
       const data = await res.json();
       setVerifyResult(data);
 
+      const totalIssues =
+        (data.issues?.length || 0) + (data.securityIssues?.length || 0);
       if (data.passed) {
         pushToast('success', 'File passed all checks!');
       } else {
-        pushToast('warning', `File has ${data.issues?.length || 0} issue(s)`);
+        const hasSecurityIssue = data.securityIssues?.some(
+          (i: any) => i.severity === 'critical' || i.severity === 'danger'
+        );
+        if (hasSecurityIssue) {
+          pushToast(
+            'error',
+            `⚠️ SECURITY THREAT DETECTED - ${totalIssues} issue(s)`
+          );
+        } else {
+          pushToast('warning', `File has ${totalIssues} issue(s)`);
+        }
       }
     } catch (err) {
       pushToast('error', 'Verification failed');
@@ -125,6 +146,8 @@ export function VerifySettings() {
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'error':
+      case 'danger':
+      case 'critical':
         return 'text-red-400 bg-red-900/30 border-red-800';
       case 'warning':
         return 'text-yellow-400 bg-yellow-900/30 border-yellow-800';
@@ -529,11 +552,62 @@ export function VerifySettings() {
                   </div>
                 </div>
 
-                {/* Issues */}
+                {/* Security Issues */}
+                {verifyResult.securityIssues &&
+                  verifyResult.securityIssues.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium text-red-400 mb-2 flex items-center gap-2">
+                        <span className="text-xl">⚠️</span>
+                        Security Threats ({verifyResult.securityIssues.length})
+                      </h4>
+                      <div className="space-y-2">
+                        {verifyResult.securityIssues.map((issue, idx) => (
+                          <div
+                            key={idx}
+                            className={`p-3 rounded border ${
+                              issue.severity === 'critical'
+                                ? 'bg-red-900/50 border-red-600 text-red-200'
+                                : issue.severity === 'danger'
+                                  ? 'bg-orange-900/50 border-orange-600 text-orange-200'
+                                  : 'bg-yellow-900/50 border-yellow-600 text-yellow-200'
+                            }`}
+                          >
+                            <div className="flex items-start gap-2">
+                              <span className="font-bold uppercase text-xs mt-0.5 px-2 py-0.5 bg-black/30 rounded">
+                                {issue.severity}
+                              </span>
+                              <div className="flex-1">
+                                <div className="font-medium">
+                                  {issue.message}
+                                </div>
+                                {issue.file && (
+                                  <div className="text-xs opacity-75 mt-1">
+                                    File: {issue.file}
+                                  </div>
+                                )}
+                                {issue.details && (
+                                  <div className="text-xs opacity-75 mt-1">
+                                    {JSON.stringify(issue.details)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 p-3 bg-red-900/30 border border-red-800 rounded text-sm text-red-300">
+                        <strong>⚠️ Warning:</strong> This file may be malicious.
+                        Do NOT open or execute it. Consider deleting it
+                        immediately.
+                      </div>
+                    </div>
+                  )}
+
+                {/* Content Issues */}
                 {verifyResult.issues.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-300 mb-2">
-                      Issues Found ({verifyResult.issues.length})
+                      Content Issues ({verifyResult.issues.length})
                     </h4>
                     <div className="space-y-2">
                       {verifyResult.issues.map((issue, idx) => (
@@ -560,26 +634,28 @@ export function VerifySettings() {
                   </div>
                 )}
 
-                {verifyResult.issues.length === 0 && (
-                  <div className="text-center py-4 text-green-400">
-                    <svg
-                      className="w-12 h-12 mx-auto mb-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div className="font-medium">
-                      No issues detected - file looks good!
+                {verifyResult.issues.length === 0 &&
+                  (!verifyResult.securityIssues ||
+                    verifyResult.securityIssues.length === 0) && (
+                    <div className="text-center py-4 text-green-400">
+                      <svg
+                        className="w-12 h-12 mx-auto mb-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <div className="font-medium">
+                        No issues detected - file looks good!
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </CardContent>
             </Card>
           )}
@@ -685,7 +761,21 @@ export function VerifySettings() {
               <CardTitle>What Gets Detected</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="p-4 bg-red-900/30 border-2 border-red-600 rounded">
+                  <h5 className="font-medium text-red-400 mb-2">
+                    🛡️ Security Threats (NEW)
+                  </h5>
+                  <ul className="text-sm text-gray-300 space-y-1">
+                    <li>• Executables (.exe, .bat, .msi)</li>
+                    <li>• Scripts (.ps1, .vbs, .js)</li>
+                    <li>• Double extensions (movie.mkv.exe)</li>
+                    <li>• Archives with executables</li>
+                    <li>• Autorun files</li>
+                    <li>• Disguised executables</li>
+                  </ul>
+                </div>
+
                 <div className="p-4 bg-red-900/20 border border-red-800 rounded">
                   <h5 className="font-medium text-red-400 mb-2">
                     🚫 Fake/Suspicious Files

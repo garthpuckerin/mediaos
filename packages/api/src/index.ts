@@ -33,6 +33,7 @@ import contentVerifyRoutes from './routes/contentVerify';
 import { validateConfigWithWarnings } from './services/config';
 import { validateOrExit } from './services/envValidation';
 import { loadDownloadersWithCredentials } from './routes/settings';
+import { verifyQueue } from './services/verifyQueue';
 
 // Load environment variables from root directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -251,6 +252,27 @@ try {
                   candidate.kind &&
                   candidate.title
                 ) {
+                  // Queue for content verification (new)
+                  if (it.savePath) {
+                    verifyQueue.addJob(
+                      'folder',
+                      it.savePath,
+                      { checkSecurity: true, checkCorruption: true },
+                      {
+                        title: candidate.title,
+                        kind: candidate.kind,
+                        itemId: candidate.id,
+                        source: 'download',
+                      },
+                      8 // Higher priority for downloads
+                    );
+                    app.log.info(
+                      { path: it.savePath, title: candidate.title },
+                      'DOWNLOAD_VERIFY_QUEUED'
+                    );
+                  }
+
+                  // Trigger legacy verify job
                   await app.inject({
                     method: 'POST',
                     url: '/api/verify/jobs',
@@ -356,6 +378,27 @@ try {
           );
           if (candidate && candidate.id && candidate.kind && candidate.title) {
             try {
+              // Queue for content verification (new)
+              if (h.storage) {
+                verifyQueue.addJob(
+                  'folder',
+                  h.storage,
+                  { checkSecurity: true, checkCorruption: true },
+                  {
+                    title: candidate.title,
+                    kind: candidate.kind,
+                    itemId: candidate.id,
+                    source: 'download',
+                  },
+                  8 // Higher priority for downloads
+                );
+                app.log.info(
+                  { path: h.storage, title: candidate.title },
+                  'SAB_VERIFY_QUEUED'
+                );
+              }
+
+              // Trigger legacy verify job
               await app.inject({
                 method: 'POST',
                 url: '/api/verify/jobs',

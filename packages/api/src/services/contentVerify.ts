@@ -7,12 +7,18 @@
  * - Quality misrepresentation (labeled 1080p but is 480p)
  * - Corrupted or truncated files
  * - Sample files masquerading as full content
+ * - Malware/executables disguised as media
  */
 
 import { execFile as _execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import {
+  scanFile as securityScanFile,
+  quickSafetyCheck,
+  SecurityIssue,
+} from './securityScan.js';
 
 const execFile = promisify(_execFile);
 
@@ -27,6 +33,7 @@ export interface ContentVerifyResult {
   ok: boolean;
   passed: boolean;
   issues: ContentIssue[];
+  securityIssues: SecurityIssue[];
   metadata: {
     duration?: number;
     width?: number;
@@ -40,6 +47,7 @@ export interface ContentVerifyResult {
     fileSize?: number;
   };
   checks: {
+    securityCheck: 'pass' | 'fail' | 'skip';
     durationCheck: 'pass' | 'fail' | 'skip';
     aspectRatioCheck: 'pass' | 'fail' | 'skip';
     bitrateCheck: 'pass' | 'fail' | 'skip';
@@ -57,6 +65,7 @@ export interface VerifyOptions {
   minBitrateKbps?: number;
   checkAspectRatio?: boolean;
   checkCorruption?: boolean;
+  checkSecurity?: boolean; // Check for malware/executables
 }
 
 // Common fake file aspect ratios (double/triple screens)
@@ -246,7 +255,9 @@ export async function verifyContent(
   options: VerifyOptions = {}
 ): Promise<ContentVerifyResult> {
   const issues: ContentIssue[] = [];
+  const securityIssues: SecurityIssue[] = [];
   const checks: ContentVerifyResult['checks'] = {
+    securityCheck: 'skip',
     durationCheck: 'skip',
     aspectRatioCheck: 'skip',
     bitrateCheck: 'skip',
@@ -270,10 +281,33 @@ export async function verifyContent(
           message: 'File not accessible',
         },
       ],
+      securityIssues: [],
       metadata: {},
       checks,
       verifiedAt: new Date().toISOString(),
     };
+  }
+
+  // Security scan (check for malware, executables, scripts)
+  if (options.checkSecurity !== false) {
+    checks.securityCheck = 'pass';
+    const securityResult = await securityScanFile(filePath);
+    securityIssues.push(...securityResult.issues);
+
+    if (!securityResult.safe) {
+      checks.securityCheck = 'fail';
+      // Also add critical security issues to main issues
+      for (const secIssue of securityResult.issues) {
+        if (secIssue.severity === 'critical') {
+          issues.push({
+            type: 'security_threat',
+            severity: 'error',
+            message: secIssue.message,
+            details: secIssue.details,
+          });
+        }
+      }
+    }
   }
 
   // Check filename for suspicious patterns
@@ -301,6 +335,7 @@ export async function verifyContent(
       ok: false,
       passed: false,
       issues,
+      securityIssues,
       metadata: { fileSize },
       checks,
       verifiedAt: new Date().toISOString(),
@@ -440,12 +475,16 @@ export async function verifyContent(
 
   // Determine overall pass/fail
   const hasErrors = issues.some((i) => i.severity === 'error');
-  const passed = !hasErrors;
+  const hasSecurityThreats = securityIssues.some(
+    (i) => i.severity === 'critical' || i.severity === 'danger'
+  );
+  const passed = !hasErrors && !hasSecurityThreats;
 
   return {
     ok: true,
     passed,
     issues,
+    securityIssues,
     metadata,
     checks,
     verifiedAt: new Date().toISOString(),
