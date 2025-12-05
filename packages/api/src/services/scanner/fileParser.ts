@@ -95,16 +95,16 @@ const CODEC_PATTERNS = [
   { pattern: /av1/i, codec: 'AV1' },
 ];
 
-// Season/Episode patterns
+// Season/Episode patterns (order matters - more specific patterns first)
 const EPISODE_PATTERNS = [
-  /S(\d{1,2})E(\d{1,3})/i, // S01E01
-  /(\d{1,2})x(\d{1,3})/i, // 1x01
+  /S(\d{1,2})E(\d{1,4})/i, // S01E01 or S01E1015 (4-digit episodes for long-running shows)
+  /\[(\d{1,2})x(\d{1,4})\]/i, // [1x01] - must come before bare 1x01 pattern
+  /(\d{1,2})x(\d{1,4})/i, // 1x01
   /Season\s*(\d+).*Episode\s*(\d+)/i, // Season 1 Episode 1
-  /\[(\d{1,2})x(\d{1,3})\]/i, // [1x01]
 ];
 
-// Year pattern
-const YEAR_PATTERN = /(?:^|[.\s(])(\d{4})(?:[.\s)]|$)/;
+// Year pattern - matches year with dots, spaces, underscores, or parentheses
+const YEAR_PATTERN = /(?:^|[.\s_(])(\d{4})(?:[.\s_)]|$)/;
 
 /**
  * Parse a media filename to extract metadata
@@ -214,8 +214,7 @@ function parseMovieFilename(name: string, result: ParsedMedia): void {
     result.year = parseInt(yearMatch[1], 10);
     // Title is everything before the year
     const titleEnd =
-      name.indexOf(yearMatch[0]) +
-      (yearMatch[0].startsWith('.') || yearMatch[0].startsWith(' ') ? 1 : 0);
+      name.indexOf(yearMatch[0]) + (/^[.\s_]/.test(yearMatch[0]) ? 1 : 0);
     result.title = cleanTitle(
       name.slice(0, titleEnd > 0 ? titleEnd - 1 : name.length)
     );
@@ -288,7 +287,8 @@ function parseBookFilename(name: string, result: ParsedMedia): void {
   // Check for "(Author)" pattern
   const authorMatch = name.match(/\(([^)]+)\)\s*$/);
   if (authorMatch) {
-    result.author = cleanTitle(authorMatch[1]);
+    // Don't run cleanTitle on author - it removes periods from names like "F. Scott"
+    result.author = authorMatch[1].trim();
     result.title = cleanTitle(name.slice(0, authorMatch.index));
     return;
   }
@@ -326,9 +326,11 @@ function cleanTitle(raw: string): string {
   return raw
     .replace(/\./g, ' ') // Replace dots with spaces
     .replace(/_/g, ' ') // Replace underscores with spaces
-    .replace(/\s+/g, ' ') // Normalize multiple spaces
     .replace(/\[.*?\]/g, '') // Remove bracketed content
     .replace(/\(.*?\)/g, '') // Remove parenthetical content (for cleaning)
+    .replace(/\s+/g, ' ') // Normalize multiple spaces
+    .replace(/^\s*-\s*/, '') // Remove leading dash
+    .replace(/\s*-\s*$/, '') // Remove trailing dash
     .trim();
 }
 
