@@ -1,0 +1,15 @@
+{
+  "setupCompleted": true,
+  "mediaFolders": [
+    {
+      "path": "C:\\TestMedia\\Movies",
+      "type": "movies",
+      "enabled": true
+    },
+    {
+      "path": "C:\\TestMedia\\Series",
+      "type": "series",
+      "enabled": true
+    }
+  ]
+}

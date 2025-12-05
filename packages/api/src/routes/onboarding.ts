@@ -5,6 +5,12 @@ import * as path from 'path';
 import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import {
+  saveMediaFolders,
+  markSetupComplete,
+  updateLastScanDate,
+  isSetupCompleted,
+} from '../services/settingsStore.js';
 
 const execAsync = promisify(exec);
 
@@ -30,26 +36,41 @@ const PickFolderSchema = z.object({
 });
 
 export async function onboardingRoutes(fastify: FastifyInstance) {
+  fastify.get('/check-setup', async (request, reply) => {
+    const completed = await isSetupCompleted();
+    return {
+      setupCompleted: completed,
+    };
+  });
+
   fastify.post('/setup', async (request, reply) => {
     const { folders } = SetupSchema.parse(request.body);
 
-    // In a real app, we would save these to the database
     fastify.log.info({ msg: 'Saving folders', folders });
+
+    // Save folders to settings
+    await saveMediaFolders(folders);
+
+    // Mark setup as complete
+    await markSetupComplete();
 
     return { success: true, message: 'Folders saved' };
   });
 
   fastify.post('/scan', async (request, reply) => {
-    // Trigger library scan
-    // const libraryService = fastify.services.library; // Assuming service injection
     fastify.log.info('Starting library scan...');
 
-    // Simulate scan start
+    // Update last scan date
+    await updateLastScanDate();
+
+    // Trigger scan worker (will be implemented)
+    // For now, return success
     return { success: true, message: 'Scan started' };
   });
 
   fastify.get('/status', async (request, reply) => {
-    // Return mock status
+    // TODO: Get actual scan status from worker
+    // For now, return completed status
     return {
       scanning: false,
       progress: 100,

@@ -20,9 +20,8 @@ import { QualitySettings } from '../pages/settings/QualitySettings';
 import { VerifySettings } from '../pages/settings/VerifySettings';
 import { DownloadClientsSettings } from '../pages/settings/DownloadClientsSettings';
 
-// Placeholder for Dashboard (No Stubs policy - using Library as default for now)
-// Placeholder for Dashboard (No Stubs policy - using Library as default for now)
-const Dashboard = () => <Navigate to="/library/series" replace />;
+// Dashboard component
+import { Dashboard } from '../pages/Dashboard';
 
 import { OnboardingPage } from '../pages/onboarding/OnboardingPage';
 import { PluginsSettings } from '../pages/settings/PluginsSettings';
@@ -38,6 +37,10 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
+        element: <Dashboard />,
+      },
+      {
+        path: 'dashboard',
         element: <Dashboard />,
       },
       {
@@ -84,11 +87,14 @@ const router = createBrowserRouter([
 ]);
 
 import { ArtworkProvider } from '../contexts/ArtworkContext';
+import { OnboardingCheck } from '../components/OnboardingCheck';
 
 export default function App() {
   return (
     <ArtworkProvider>
-      <RouterProvider router={router} />
+      <OnboardingCheck>
+        <RouterProvider router={router} />
+      </OnboardingCheck>
     </ArtworkProvider>
   );
 }

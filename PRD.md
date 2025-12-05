@@ -89,6 +89,51 @@ MediaOS is a unified, single-container media management platform that replaces t
 - Manual container update trigger (Watchtower not bundled)
 - Version management and rollback capabilities
 
+### 3.10 Profile System
+
+The Profile System enables granular control over download preferences, allowing different quality, language, and release settings for different content categories.
+
+#### Quality Profiles
+
+- **Named Profiles:** Create unlimited named profiles (e.g., "Kids 720p", "Anime Dual-Audio", "4K HDR Movies")
+- **Quality Settings:**
+  - Allowed qualities with custom ranking order
+  - Minimum and maximum quality bounds
+  - Cutoff quality (stop upgrading when reached)
+  - Preferred quality for initial downloads
+- **Size Limits:** Min/max file size constraints per profile
+
+#### Language Profiles
+
+- **Audio Languages:** Preferred audio tracks (e.g., English, Japanese, Spanish)
+- **Subtitle Languages:** Required/preferred subtitle languages
+- **Dual-Audio Support:** Prefer releases with multiple audio tracks
+- **Original Language:** Option to always include original language
+
+#### Release Profiles
+
+- **Must Contain:** Required keywords (e.g., "REMUX", "BluRay", "DTS")
+- **Must Not Contain:** Excluded keywords (e.g., "CAM", "TS", "HDTS")
+- **Preferred Terms:** Boost releases containing preferred terms
+- **Indexer Restrictions:** Limit profile to specific indexers
+
+#### Profile Assignment
+
+- **Default Profiles:** Set default profile per media type (series, movies, etc.)
+- **Per-Item Override:** Assign specific profile to individual series/movies
+- **Bulk Assignment:** Apply profiles to multiple items via tags
+- **Profile Inheritance:** Items use default profile unless overridden
+
+#### Example Use Cases
+
+| Profile Name  | Quality   | Audio                   | Use Case                          |
+| ------------- | --------- | ----------------------- | --------------------------------- |
+| Kids TV       | 720p max  | English only            | Children's content, smaller files |
+| Anime         | 1080p     | Japanese + English      | Anime with dual-audio preference  |
+| Primetime     | 1080p     | English                 | Standard TV shows                 |
+| 4K Movies     | 2160p HDR | English + Original      | Premium movie quality             |
+| Foreign Films | 1080p     | Original + English subs | International cinema              |
+
 ## 4. AI Enhancements
 
 ### 4.1 Natural Language Commands

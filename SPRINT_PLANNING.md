@@ -378,18 +378,55 @@ This document provides comprehensive sprint planning and roadmap for the MediaOS
 - Search functionality is working
 - Indexer management is intuitive
 
-## 10. Sprint 8: Download Management
+## 10. Sprint 8: Profile System & Download Management
 
 **Duration:** 2 weeks  
-**Sprint Goal:** Implement download queue and external client integration
+**Sprint Goal:** Implement profile system and download queue with external client integration
 
 ### User Stories
+
+- [ ] **PROF-001:** Quality profile management
+  - Acceptance Criteria:
+    - Create/edit/delete named profiles
+    - Quality ranking with drag-and-drop
+    - Cutoff and upgrade settings
+    - Size limit configuration
+  - Story Points: 8
+  - Priority: High
+
+- [ ] **PROF-002:** Language & release profiles
+  - Acceptance Criteria:
+    - Audio language preferences
+    - Subtitle language requirements
+    - Release keyword filtering (must/must-not contain)
+    - Preferred terms scoring
+  - Story Points: 5
+  - Priority: High
+
+- [ ] **PROF-003:** Profile assignment
+  - Acceptance Criteria:
+    - Default profile per media type
+    - Per-item profile override
+    - Bulk assignment via tags
+    - Profile inheritance logic
+  - Story Points: 5
+  - Priority: High
+
+- [ ] **PROF-004:** Profile UI
+  - Acceptance Criteria:
+    - Profile management interface
+    - Visual quality ranking editor
+    - Profile assignment in item details
+    - Profile preview/test functionality
+  - Story Points: 5
+  - Priority: Medium
 
 - [ ] **DL-001:** Download queue system
   - Acceptance Criteria:
     - Queue management
     - Priority handling
     - Status tracking
+    - Profile-based filtering
   - Story Points: 8
   - Priority: High
 
@@ -409,19 +446,13 @@ This document provides comprehensive sprint planning and roadmap for the MediaOS
   - Story Points: 5
   - Priority: High
 
-- [ ] **DL-004:** Download UI
-  - Acceptance Criteria:
-    - Queue display
-    - Progress indicators
-    - Management controls
-  - Story Points: 5
-  - Priority: Medium
-
-### Sprint Capacity: 26 story points
+### Sprint Capacity: 44 story points (may split into 2 sprints)
 
 ### Sprint Success Criteria:
 
-- Download system is functional
+- Profile system is fully functional
+- Users can create and assign quality/language profiles
+- Download system respects profile settings
 - External clients are integrated
 - Download monitoring is working
 
@@ -581,13 +612,15 @@ This document provides comprehensive sprint planning and roadmap for the MediaOS
   - Story Points: 8
   - Priority: High
 
-- [ ] **AI-002:** Smart quality profiles
+- [ ] **AI-002:** Smart quality profiles (builds on PROF-001-004)
   - Acceptance Criteria:
-    - Learning algorithms
-    - Preference detection
-    - Quality recommendations
+    - Learning algorithms for profile optimization
+    - Auto-detect preferred codecs and file sizes
+    - Quality recommendations based on usage patterns
+    - Suggest profile adjustments based on success rates
   - Story Points: 8
   - Priority: High
+  - Dependencies: Profile System (Sprint 8)
 
 - [ ] **AI-003:** Indexer ranking
   - Acceptance Criteria:

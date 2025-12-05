@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+/**
+ * @vitest-environment happy-dom
+ */
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ArtworkProvider } from './contexts/ArtworkContext';
 

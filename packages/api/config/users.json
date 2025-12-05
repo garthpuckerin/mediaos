@@ -7,5 +7,14 @@
     "createdAt": "2025-11-27T17:20:56.065Z",
     "updatedAt": "2025-11-27T17:20:56.065Z",
     "lastLoginAt": "2025-11-30T06:58:05.435Z"
+  },
+  "user_1764868943450_nbb7uzzh4": {
+    "id": "user_1764868943450_nbb7uzzh4",
+    "email": "test@mediaos.local",
+    "passwordHash": "9ae8be2462c9b7ee19e1bf33a74e6885:a12d072de5964837d4e7db6c2b0a297f9ec400969cb65904fcd8de0015a0c66ddcaaaad55cd8aee3c402df64c373dc63c6e014138d72a8b5b81d4ab9cb0ec464",
+    "role": "user",
+    "createdAt": "2025-12-04T17:22:23.498Z",
+    "updatedAt": "2025-12-04T17:22:23.498Z",
+    "lastLoginAt": "2025-12-05T05:46:01.244Z"
   }
 }
