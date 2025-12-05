@@ -35,6 +35,7 @@ import { validateConfigWithWarnings } from './services/config';
 import { validateOrExit } from './services/envValidation';
 import { loadDownloadersWithCredentials } from './routes/settings';
 import { verifyQueue } from './services/verifyQueue';
+import { subtitleAutomation } from './services/subtitleAutomation';
 
 // Load environment variables from root directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -272,6 +273,18 @@ try {
                       { path: it.savePath, title: candidate.title },
                       'DOWNLOAD_VERIFY_QUEUED'
                     );
+
+                    // Queue for subtitle automation
+                    subtitleAutomation.processDownload(it.savePath, {
+                      title: candidate.title,
+                      kind: candidate.kind,
+                      itemId: candidate.id,
+                      source: 'download',
+                    });
+                    app.log.info(
+                      { path: it.savePath, title: candidate.title },
+                      'SUBTITLE_AUTOMATION_QUEUED'
+                    );
                   }
 
                   // Trigger legacy verify job
@@ -397,6 +410,18 @@ try {
                 app.log.info(
                   { path: h.storage, title: candidate.title },
                   'SAB_VERIFY_QUEUED'
+                );
+
+                // Queue for subtitle automation
+                subtitleAutomation.processDownload(h.storage, {
+                  title: candidate.title,
+                  kind: candidate.kind,
+                  itemId: candidate.id,
+                  source: 'download',
+                });
+                app.log.info(
+                  { path: h.storage, title: candidate.title },
+                  'SAB_SUBTITLE_AUTOMATION_QUEUED'
                 );
               }
 

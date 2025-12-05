@@ -35,9 +35,49 @@ interface GenerationJob {
   videoPath: string;
 }
 
+interface AutomationConfig {
+  enabled: boolean;
+  autoSyncOnDownload: boolean;
+  autoGenerateWhenMissing: boolean;
+  preferredLanguages: string[];
+  whisperModel: 'tiny' | 'base' | 'small' | 'medium' | 'large';
+  maxSyncOffsetMs: number;
+  scanScheduleHours: number;
+}
+
+interface AutomationStatus {
+  enabled: boolean;
+  queuedJobs: number;
+  runningJobs: number;
+  completedJobs: number;
+  failedJobs: number;
+  lastScanAt?: string;
+  nextScanAt?: string;
+  whisperAvailable: boolean;
+}
+
+interface AutomationJob {
+  id: string;
+  type: 'sync' | 'generate' | 'extract';
+  videoPath: string;
+  status: 'queued' | 'running' | 'completed' | 'failed' | 'skipped';
+  createdAt: string;
+  completedAt?: string;
+  result?: {
+    action: string;
+    outputPath?: string;
+    offsetMs?: number;
+  };
+  error?: string;
+  metadata?: {
+    title?: string;
+    source?: string;
+  };
+}
+
 export function SubtitleTools() {
   const [activeTab, setActiveTab] = React.useState<
-    'sync' | 'generate' | 'extract'
+    'sync' | 'generate' | 'extract' | 'automation'
   >('sync');
 
   // Sync state
@@ -66,6 +106,17 @@ export function SubtitleTools() {
   const [loadingTracks, setLoadingTracks] = React.useState(false);
   const [extracting, setExtracting] = React.useState(false);
 
+  // Automation state
+  const [autoConfig, setAutoConfig] = React.useState<AutomationConfig | null>(
+    null
+  );
+  const [autoStatus, setAutoStatus] = React.useState<AutomationStatus | null>(
+    null
+  );
+  const [autoJobs, setAutoJobs] = React.useState<AutomationJob[]>([]);
+  const [savingConfig, setSavingConfig] = React.useState(false);
+  const [scanning, setScanning] = React.useState(false);
+
   // Check Whisper availability on mount
   React.useEffect(() => {
     fetch('/api/subtitles/generate/check')
@@ -73,6 +124,39 @@ export function SubtitleTools() {
       .then((data) => setWhisperAvailable(data.available))
       .catch(() => setWhisperAvailable(false));
   }, []);
+
+  // Load automation config and status
+  React.useEffect(() => {
+    const loadAutomation = async () => {
+      try {
+        const [configRes, statusRes, jobsRes] = await Promise.all([
+          fetch('/api/subtitles/automation/config'),
+          fetch('/api/subtitles/automation/status'),
+          fetch('/api/subtitles/automation/jobs'),
+        ]);
+        const configData = await configRes.json();
+        const statusData = await statusRes.json();
+        const jobsData = await jobsRes.json();
+
+        if (configData.ok) setAutoConfig(configData.config);
+        if (statusData.ok) setAutoStatus(statusData);
+        if (jobsData.ok) setAutoJobs(jobsData.jobs);
+      } catch {
+        // Ignore errors
+      }
+    };
+
+    loadAutomation();
+
+    // Poll status every 5 seconds when on automation tab
+    const interval = setInterval(() => {
+      if (activeTab === 'automation') {
+        loadAutomation();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [activeTab]);
 
   // Poll active jobs
   React.useEffect(() => {
@@ -90,6 +174,82 @@ export function SubtitleTools() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // ==========================================
+  // Automation Handlers
+  // ==========================================
+
+  const handleSaveAutoConfig = async () => {
+    if (!autoConfig) return;
+
+    setSavingConfig(true);
+    try {
+      const res = await fetch('/api/subtitles/automation/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(autoConfig),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setAutoConfig(data.config);
+        pushToast('success', 'Automation settings saved');
+      } else {
+        pushToast('error', data.error || 'Failed to save');
+      }
+    } catch (e) {
+      pushToast('error', (e as Error).message);
+    } finally {
+      setSavingConfig(false);
+    }
+  };
+
+  const handleTriggerScan = async () => {
+    setScanning(true);
+    try {
+      const res = await fetch('/api/subtitles/automation/scan', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        pushToast(
+          'success',
+          `Scanned ${data.scanned} items, found ${data.issues} issues`
+        );
+        // Refresh jobs
+        const jobsRes = await fetch('/api/subtitles/automation/jobs');
+        const jobsData = await jobsRes.json();
+        if (jobsData.ok) setAutoJobs(jobsData.jobs);
+      } else {
+        pushToast('error', data.error || 'Scan failed');
+      }
+    } catch (e) {
+      pushToast('error', (e as Error).message);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleClearJobs = async () => {
+    try {
+      const res = await fetch('/api/subtitles/automation/clear', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.ok) {
+        pushToast('success', `Cleared ${data.cleared} jobs`);
+        setAutoJobs((prev) =>
+          prev.filter(
+            (j) =>
+              j.status !== 'completed' &&
+              j.status !== 'failed' &&
+              j.status !== 'skipped'
+          )
+        );
+      }
+    } catch (e) {
+      pushToast('error', (e as Error).message);
+    }
+  };
 
   // ==========================================
   // Sync Handlers
@@ -299,7 +459,7 @@ export function SubtitleTools() {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-6 border-b border-gray-700">
-        {(['sync', 'generate', 'extract'] as const).map((tab) => (
+        {(['sync', 'generate', 'extract', 'automation'] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -312,6 +472,7 @@ export function SubtitleTools() {
             {tab === 'sync' && '🔄 Sync Detection'}
             {tab === 'generate' && '🤖 AI Generation'}
             {tab === 'extract' && '📤 Extract'}
+            {tab === 'automation' && '⚡ Automation'}
           </button>
         ))}
       </div>
@@ -716,6 +877,343 @@ export function SubtitleTools() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Automation Tab */}
+      {activeTab === 'automation' && (
+        <div className="space-y-6">
+          {/* Status Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Automation Status</span>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleTriggerScan}
+                    disabled={scanning}
+                  >
+                    {scanning ? 'Scanning...' : 'Scan Now'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={handleClearJobs}>
+                    Clear History
+                  </Button>
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {autoStatus && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <div className="text-xs text-gray-500">Status</div>
+                    <div
+                      className={`font-medium ${autoStatus.enabled ? 'text-green-400' : 'text-gray-500'}`}
+                    >
+                      {autoStatus.enabled ? 'Enabled' : 'Disabled'}
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <div className="text-xs text-gray-500">Queued</div>
+                    <div className="font-medium text-white">
+                      {autoStatus.queuedJobs}
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <div className="text-xs text-gray-500">Running</div>
+                    <div className="font-medium text-cyan-400">
+                      {autoStatus.runningJobs}
+                    </div>
+                  </div>
+                  <div className="bg-gray-800 rounded-lg p-3">
+                    <div className="text-xs text-gray-500">Completed</div>
+                    <div className="font-medium text-green-400">
+                      {autoStatus.completedJobs}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {autoStatus?.lastScanAt && (
+                <div className="mt-4 text-sm text-gray-400">
+                  Last scan: {new Date(autoStatus.lastScanAt).toLocaleString()}
+                  {autoStatus.nextScanAt && (
+                    <>
+                      {' '}
+                      • Next: {new Date(autoStatus.nextScanAt).toLocaleString()}
+                    </>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Configuration Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Automation Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {autoConfig && (
+                <>
+                  <label className="flex items-center gap-3 p-3 bg-gray-800 rounded cursor-pointer hover:bg-gray-750">
+                    <input
+                      type="checkbox"
+                      checked={autoConfig.enabled}
+                      onChange={(e) =>
+                        setAutoConfig({
+                          ...autoConfig,
+                          enabled: e.target.checked,
+                        })
+                      }
+                      className="rounded border-gray-600"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-white">
+                        Enable Automation
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Process subtitles automatically
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 bg-gray-800 rounded cursor-pointer hover:bg-gray-750">
+                    <input
+                      type="checkbox"
+                      checked={autoConfig.autoSyncOnDownload}
+                      onChange={(e) =>
+                        setAutoConfig({
+                          ...autoConfig,
+                          autoSyncOnDownload: e.target.checked,
+                        })
+                      }
+                      className="rounded border-gray-600"
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-white">
+                        Auto-Sync on Download
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Check and fix subtitle sync when downloads complete
+                      </div>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 bg-gray-800 rounded cursor-pointer hover:bg-gray-750">
+                    <input
+                      type="checkbox"
+                      checked={autoConfig.autoGenerateWhenMissing}
+                      onChange={(e) =>
+                        setAutoConfig({
+                          ...autoConfig,
+                          autoGenerateWhenMissing: e.target.checked,
+                        })
+                      }
+                      className="rounded border-gray-600"
+                      disabled={!autoStatus?.whisperAvailable}
+                    />
+                    <div>
+                      <div className="text-sm font-medium text-white">
+                        Auto-Generate When Missing
+                        {!autoStatus?.whisperAvailable && (
+                          <span className="ml-2 text-xs text-red-400">
+                            (Whisper not installed)
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Generate subtitles using AI if none exist
+                      </div>
+                    </div>
+                  </label>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="space-y-1.5">
+                      <div className="text-sm text-gray-300">Whisper Model</div>
+                      <select
+                        value={autoConfig.whisperModel}
+                        onChange={(e) =>
+                          setAutoConfig({
+                            ...autoConfig,
+                            whisperModel: e.target.value as any,
+                          })
+                        }
+                        className="w-full rounded-md border border-gray-600 bg-gray-800 px-3 py-2 text-white"
+                      >
+                        <option value="tiny">Tiny (fastest)</option>
+                        <option value="base">Base (balanced)</option>
+                        <option value="small">Small</option>
+                        <option value="medium">Medium</option>
+                        <option value="large">Large (best)</option>
+                      </select>
+                    </label>
+
+                    <label className="space-y-1.5">
+                      <div className="text-sm text-gray-300">
+                        Scan Schedule (hours)
+                      </div>
+                      <Input
+                        type="number"
+                        value={autoConfig.scanScheduleHours}
+                        onChange={(e) =>
+                          setAutoConfig({
+                            ...autoConfig,
+                            scanScheduleHours: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        placeholder="24 (0 to disable)"
+                      />
+                    </label>
+                  </div>
+
+                  <label className="space-y-1.5">
+                    <div className="text-sm text-gray-300">
+                      Max Sync Offset (ms)
+                    </div>
+                    <Input
+                      type="number"
+                      value={autoConfig.maxSyncOffsetMs}
+                      onChange={(e) =>
+                        setAutoConfig({
+                          ...autoConfig,
+                          maxSyncOffsetMs: parseInt(e.target.value) || 5000,
+                        })
+                      }
+                      placeholder="5000"
+                    />
+                    <div className="text-xs text-gray-500">
+                      Won't auto-fix if offset is larger than this (may be wrong
+                      version)
+                    </div>
+                  </label>
+
+                  <div className="pt-2">
+                    <Button
+                      onClick={handleSaveAutoConfig}
+                      disabled={savingConfig}
+                    >
+                      {savingConfig ? 'Saving...' : 'Save Settings'}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Jobs Card */}
+          {autoJobs.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Jobs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {autoJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className={`p-3 rounded-lg border ${
+                        job.status === 'completed'
+                          ? 'bg-green-900/20 border-green-800'
+                          : job.status === 'failed'
+                            ? 'bg-red-900/20 border-red-800'
+                            : job.status === 'running'
+                              ? 'bg-blue-900/20 border-blue-800'
+                              : job.status === 'skipped'
+                                ? 'bg-gray-800 border-gray-700'
+                                : 'bg-gray-800 border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-white truncate">
+                            {job.metadata?.title ||
+                              job.videoPath.split(/[/\\]/).pop()}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {job.type} • {job.metadata?.source || 'manual'}
+                          </div>
+                        </div>
+                        <div
+                          className={`text-xs px-2 py-0.5 rounded ml-2 ${
+                            job.status === 'completed'
+                              ? 'bg-green-800 text-green-300'
+                              : job.status === 'failed'
+                                ? 'bg-red-800 text-red-300'
+                                : job.status === 'running'
+                                  ? 'bg-blue-800 text-blue-300'
+                                  : 'bg-gray-700 text-gray-400'
+                          }`}
+                        >
+                          {job.status}
+                        </div>
+                      </div>
+                      {job.result && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {job.result.action}
+                          {job.result.offsetMs !== undefined &&
+                            ` (${job.result.offsetMs}ms)`}
+                        </div>
+                      )}
+                      {job.error && (
+                        <div className="text-xs text-red-400 mt-1">
+                          {job.error}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Info Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>How Automation Works</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3 text-sm text-gray-400">
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400">1.</span>
+                  <div>
+                    <strong className="text-white">On Download Complete</strong>
+                    <br />
+                    When a download finishes, the system checks for subtitle
+                    files and analyzes sync.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400">2.</span>
+                  <div>
+                    <strong className="text-white">Sync Detection</strong>
+                    <br />
+                    Compares subtitle timing with audio speech detection to find
+                    offset.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400">3.</span>
+                  <div>
+                    <strong className="text-white">Auto-Correction</strong>
+                    <br />
+                    If offset is detected (and within limits), creates a synced
+                    subtitle file.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-cyan-400">4.</span>
+                  <div>
+                    <strong className="text-white">AI Generation</strong>
+                    <br />
+                    If no subtitles exist and Whisper is installed, generates
+                    them automatically.
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </section>

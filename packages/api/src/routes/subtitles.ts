@@ -14,6 +14,10 @@ import {
   searchSubtitles,
   GenerationProgress,
 } from '../services/subtitles.js';
+import {
+  subtitleAutomation,
+  SubtitleAutomationConfig,
+} from '../services/subtitleAutomation.js';
 
 // Track active generation jobs
 const activeJobs: Map<
@@ -147,12 +151,10 @@ export default async function subtitleRoutes(app: FastifyInstance) {
       const { videoPath, subtitlePath } = request.body;
 
       if (!videoPath || !subtitlePath) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: 'videoPath and subtitlePath are required',
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: 'videoPath and subtitlePath are required',
+        });
       }
 
       const resolvedVideo = path.isAbsolute(videoPath)
@@ -184,12 +186,10 @@ export default async function subtitleRoutes(app: FastifyInstance) {
       const { videoPath, subtitlePath, outputPath } = request.body;
 
       if (!videoPath || !subtitlePath) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: 'videoPath and subtitlePath are required',
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: 'videoPath and subtitlePath are required',
+        });
       }
 
       const resolvedVideo = path.isAbsolute(videoPath)
@@ -466,12 +466,10 @@ export default async function subtitleRoutes(app: FastifyInstance) {
       const { inputPath, outputFormat, outputPath } = request.body;
 
       if (!inputPath || !outputFormat) {
-        return reply
-          .code(400)
-          .send({
-            ok: false,
-            error: 'inputPath and outputFormat are required',
-          });
+        return reply.code(400).send({
+          ok: false,
+          error: 'inputPath and outputFormat are required',
+        });
       }
 
       const resolvedInput = path.isAbsolute(inputPath)
@@ -519,6 +517,161 @@ export default async function subtitleRoutes(app: FastifyInstance) {
       } catch (e) {
         return reply.send({ ok: false, error: (e as Error).message });
       }
+    }
+  );
+
+  // ==========================================
+  // Automation Routes
+  // ==========================================
+
+  /**
+   * GET /api/subtitles/automation/status
+   * Get automation status
+   */
+  app.get(
+    '/api/subtitles/automation/status',
+    async (_request, reply: FastifyReply) => {
+      const status = subtitleAutomation.getStatus();
+      return reply.send({ ok: true, ...status });
+    }
+  );
+
+  /**
+   * GET /api/subtitles/automation/config
+   * Get automation configuration
+   */
+  app.get(
+    '/api/subtitles/automation/config',
+    async (_request, reply: FastifyReply) => {
+      const config = subtitleAutomation.getConfig();
+      return reply.send({ ok: true, config });
+    }
+  );
+
+  /**
+   * POST /api/subtitles/automation/config
+   * Update automation configuration
+   */
+  app.post(
+    '/api/subtitles/automation/config',
+    async (
+      request: FastifyRequest<{ Body: Partial<SubtitleAutomationConfig> }>,
+      reply: FastifyReply
+    ) => {
+      await subtitleAutomation.saveConfig(request.body);
+      const config = subtitleAutomation.getConfig();
+      return reply.send({ ok: true, config, message: 'Configuration saved' });
+    }
+  );
+
+  /**
+   * GET /api/subtitles/automation/jobs
+   * Get all automation jobs
+   */
+  app.get(
+    '/api/subtitles/automation/jobs',
+    async (_request, reply: FastifyReply) => {
+      const jobs = subtitleAutomation.getAllJobs();
+      return reply.send({
+        ok: true,
+        jobs: jobs.slice(0, 100), // Limit to 100 most recent
+        total: jobs.length,
+      });
+    }
+  );
+
+  /**
+   * GET /api/subtitles/automation/jobs/:id
+   * Get specific automation job
+   */
+  app.get(
+    '/api/subtitles/automation/jobs/:id',
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply
+    ) => {
+      const job = subtitleAutomation.getJob(request.params.id);
+      if (!job) {
+        return reply.code(404).send({ ok: false, error: 'Job not found' });
+      }
+      return reply.send({ ok: true, job });
+    }
+  );
+
+  /**
+   * POST /api/subtitles/automation/scan
+   * Trigger immediate library scan
+   */
+  app.post(
+    '/api/subtitles/automation/scan',
+    async (_request, reply: FastifyReply) => {
+      const result = await subtitleAutomation.triggerScan();
+      return reply.send({
+        ok: true,
+        ...result,
+        message: `Scanned ${result.scanned} items, found ${result.issues} issues`,
+      });
+    }
+  );
+
+  /**
+   * POST /api/subtitles/automation/clear
+   * Clear completed jobs
+   */
+  app.post(
+    '/api/subtitles/automation/clear',
+    async (_request, reply: FastifyReply) => {
+      const cleared = subtitleAutomation.clearCompleted();
+      return reply.send({
+        ok: true,
+        cleared,
+        message: `Cleared ${cleared} completed jobs`,
+      });
+    }
+  );
+
+  /**
+   * POST /api/subtitles/automation/process
+   * Manually queue a video for processing
+   */
+  app.post(
+    '/api/subtitles/automation/process',
+    async (
+      request: FastifyRequest<{
+        Body: {
+          videoPath: string;
+          type: 'sync' | 'generate';
+          metadata?: {
+            title?: string;
+            kind?: string;
+            itemId?: string;
+          };
+        };
+      }>,
+      reply: FastifyReply
+    ) => {
+      const { videoPath, type, metadata } = request.body;
+
+      if (!videoPath || !type) {
+        return reply
+          .code(400)
+          .send({ ok: false, error: 'videoPath and type are required' });
+      }
+
+      const resolvedPath = path.isAbsolute(videoPath)
+        ? videoPath
+        : path.resolve(process.cwd(), videoPath);
+
+      const jobId = subtitleAutomation.addJob(type, resolvedPath, {
+        ...metadata,
+        source: 'manual',
+      });
+
+      return reply.send({
+        ok: true,
+        jobId,
+        message: 'Job queued for processing',
+      });
     }
   );
 }
