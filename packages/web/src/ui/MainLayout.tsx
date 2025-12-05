@@ -91,6 +91,38 @@ const IconSettings = () => (
   </svg>
 );
 
+const IconTools = () => (
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM14.121 14.121L19 19m-7-7l-2.5 2.5M9.879 9.879L5 5m7 7l2.5-2.5"
+    />
+  </svg>
+);
+
+const IconSubtitle = () => (
+  <svg
+    className="w-4 h-4"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+    />
+  </svg>
+);
+
 const IconTv = () => (
   <svg
     className="w-4 h-4"
@@ -337,6 +369,7 @@ export function MainLayout() {
     { label: 'Library', href: '/library', icon: <IconLibrary /> },
     { label: 'Calendar', href: '/calendar', icon: <IconCalendar /> },
     { label: 'Activity', href: '/activity/queue', icon: <IconActivity /> },
+    { label: 'Tools', href: '/tools', icon: <IconTools /> },
     { label: 'Settings', href: '/settings/general', icon: <IconSettings /> },
   ];
 
@@ -351,6 +384,10 @@ export function MainLayout() {
     { label: 'Queue', href: '/activity/queue', icon: <IconQueue /> },
     { label: 'History', href: '/activity/history', icon: <IconHistory /> },
     { label: 'Wanted', href: '/activity/wanted', icon: <IconWanted /> },
+  ];
+
+  const toolsSubItems: SubNavItem[] = [
+    { label: 'Subtitles', href: '/tools/subtitles', icon: <IconSubtitle /> },
   ];
 
   const settingsSubItems: SubNavItem[] = [
@@ -478,6 +515,41 @@ export function MainLayout() {
                 </h3>
                 <nav className="space-y-0.5">
                   {activitySubItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className={clsx(
+                        'flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors',
+                        isSubActive(item.href)
+                          ? 'bg-gray-800/50 text-white'
+                          : 'text-gray-500 hover:bg-gray-800/30 hover:text-gray-300'
+                      )}
+                    >
+                      <span
+                        className={
+                          isSubActive(item.href)
+                            ? 'text-gray-300'
+                            : 'text-gray-600'
+                        }
+                      >
+                        {item.icon}
+                      </span>
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+              </div>
+            </div>
+          )}
+
+          {path.startsWith('/tools') && (
+            <div className="px-3 pb-3">
+              <div className="border-t border-gray-800 pt-3">
+                <h3 className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+                  Tools
+                </h3>
+                <nav className="space-y-0.5">
+                  {toolsSubItems.map((item) => (
                     <Link
                       key={item.href}
                       to={item.href}

@@ -26,6 +26,7 @@ import { Dashboard } from '../pages/Dashboard';
 
 import { OnboardingPage } from '../pages/onboarding/OnboardingPage';
 import { PluginsSettings } from '../pages/settings/PluginsSettings';
+import { SubtitleTools } from '../pages/tools/SubtitleTools';
 
 const router = createBrowserRouter([
   {
@@ -66,6 +67,13 @@ const router = createBrowserRouter([
           { path: 'queue', element: <ActivityQueue /> },
           { path: 'history', element: <ActivityHistory /> },
           { path: 'wanted', element: <WantedPage /> },
+        ],
+      },
+      {
+        path: 'tools',
+        children: [
+          { index: true, element: <Navigate to="subtitles" replace /> },
+          { path: 'subtitles', element: <SubtitleTools /> },
         ],
       },
       {

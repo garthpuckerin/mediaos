@@ -30,6 +30,7 @@ import scannerRoutes from './routes/scanner';
 import organizerRoutes from './routes/organizer';
 import metadataRoutes from './routes/metadata';
 import contentVerifyRoutes from './routes/contentVerify';
+import subtitleRoutes from './routes/subtitles';
 import { validateConfigWithWarnings } from './services/config';
 import { validateOrExit } from './services/envValidation';
 import { loadDownloadersWithCredentials } from './routes/settings';
@@ -99,6 +100,7 @@ await app.register(scannerRoutes);
 await app.register(organizerRoutes);
 await app.register(metadataRoutes, { prefix: '/api/metadata' });
 await app.register(contentVerifyRoutes);
+await app.register(subtitleRoutes);
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {
