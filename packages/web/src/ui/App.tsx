@@ -19,6 +19,7 @@ import { IndexersSettings } from '../pages/settings/IndexersSettings';
 import { QualitySettings } from '../pages/settings/QualitySettings';
 import { VerifySettings } from '../pages/settings/VerifySettings';
 import { DownloadClientsSettings } from '../pages/settings/DownloadClientsSettings';
+import { MediaManagementSettings } from '../pages/settings/MediaManagementSettings';
 
 // Dashboard component
 import { Dashboard } from '../pages/Dashboard';
@@ -75,6 +76,7 @@ const router = createBrowserRouter([
             path: 'general',
             element: <div>General Settings (Coming Soon)</div>,
           },
+          { path: 'media-management', element: <MediaManagementSettings /> },
           { path: 'download-clients', element: <DownloadClientsSettings /> },
           { path: 'indexers', element: <IndexersSettings /> },
           { path: 'quality', element: <QualitySettings /> },
