@@ -11,6 +11,21 @@ import {
 } from '../../components/ui/Card';
 import { pushToast } from '../../utils/toast';
 
+interface VerifyResult {
+  passed: boolean;
+  issues: Array<{
+    type: string;
+    severity: 'info' | 'warning' | 'error';
+    message: string;
+  }>;
+  metadata?: {
+    duration?: number;
+    width?: number;
+    height?: number;
+    bitrate?: number;
+  };
+}
+
 interface ParsedFile {
   path: string;
   filename: string;
@@ -32,6 +47,8 @@ interface ParsedFile {
   size: number;
   selected: boolean;
   matchedItem?: { id: string; title: string };
+  verifyResult?: VerifyResult;
+  verifying?: boolean;
 }
 
 interface LibraryItem {
@@ -230,12 +247,96 @@ export function LibraryImportSection() {
     return `${(bytes / 1024).toFixed(1)} KB`;
   };
 
+  // Verify a single file
+  const handleVerifyFile = async (index: number) => {
+    const file = files[index];
+    if (!file) return;
+
+    setFiles((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, verifying: true } : f))
+    );
+
+    try {
+      const res = await fetch('/api/verify/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          path: file.path,
+          expectedQuality: file.parsed.quality,
+        }),
+      });
+      const data = await res.json();
+
+      setFiles((prev) =>
+        prev.map((f, i) =>
+          i === index
+            ? {
+                ...f,
+                verifying: false,
+                verifyResult: {
+                  passed: data.passed,
+                  issues: data.issues || [],
+                  metadata: data.metadata,
+                },
+              }
+            : f
+        )
+      );
+
+      if (data.passed) {
+        pushToast('success', `${file.filename} passed verification`);
+      } else {
+        pushToast(
+          'warning',
+          `${file.filename} has ${data.issues?.length || 0} issue(s)`
+        );
+      }
+    } catch (e) {
+      setFiles((prev) =>
+        prev.map((f, i) => (i === index ? { ...f, verifying: false } : f))
+      );
+      pushToast('error', 'Verification failed');
+    }
+  };
+
+  // Verify all selected files
+  const handleVerifyAll = async () => {
+    const selectedIndices = files
+      .map((f, i) => (f.selected ? i : -1))
+      .filter((i) => i >= 0);
+
+    if (selectedIndices.length === 0) {
+      pushToast('error', 'No files selected');
+      return;
+    }
+
+    pushToast('info', `Verifying ${selectedIndices.length} files...`);
+
+    for (const idx of selectedIndices) {
+      await handleVerifyFile(idx);
+    }
+
+    const results = files.filter((f) => f.selected && f.verifyResult);
+    const passed = results.filter((f) => f.verifyResult?.passed).length;
+    const failed = results.length - passed;
+
+    pushToast(
+      failed > 0 ? 'warning' : 'success',
+      `Verification complete: ${passed} passed, ${failed} failed`
+    );
+  };
+
   const filteredFiles = filterUnmatched
     ? files.filter((f) => !f.matchedItem)
     : files;
 
   const selectedCount = files.filter((f) => f.selected).length;
   const matchedCount = files.filter((f) => f.matchedItem).length;
+  const verifiedCount = files.filter((f) => f.verifyResult).length;
+  const passedCount = files.filter((f) => f.verifyResult?.passed).length;
+  const failedCount = files.filter(
+    (f) => f.verifyResult && !f.verifyResult.passed
+  ).length;
 
   return (
     <section className="max-w-6xl">
@@ -283,11 +384,22 @@ export function LibraryImportSection() {
         <>
           {/* Stats & Actions */}
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <span className="text-sm text-gray-400">
-                {files.length} files found • {matchedCount} matched •{' '}
-                {selectedCount} selected
+                {files.length} files • {matchedCount} matched • {selectedCount}{' '}
+                selected
               </span>
+              {verifiedCount > 0 && (
+                <span className="text-sm">
+                  <span className="text-green-400">{passedCount} passed</span>
+                  {failedCount > 0 && (
+                    <>
+                      {' • '}
+                      <span className="text-red-400">{failedCount} failed</span>
+                    </>
+                  )}
+                </span>
+              )}
               <label className="flex items-center gap-2 text-sm text-gray-400">
                 <input
                   type="checkbox"
@@ -304,6 +416,13 @@ export function LibraryImportSection() {
               </Button>
               <Button variant="ghost" size="sm" onClick={handleSelectNone}>
                 Select None
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={handleVerifyAll}
+                disabled={selectedCount === 0}
+              >
+                Verify Selected
               </Button>
               <Button
                 onClick={handleImport}
@@ -380,6 +499,41 @@ export function LibraryImportSection() {
                           {formatSize(file.size)}
                         </span>
                       </div>
+                    </div>
+
+                    {/* Verify Button */}
+                    <div className="shrink-0">
+                      <button
+                        onClick={() => handleVerifyFile(files.indexOf(file))}
+                        disabled={file.verifying}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                          file.verifyResult
+                            ? file.verifyResult.passed
+                              ? 'border-green-700 bg-green-900/20 text-green-400'
+                              : 'border-red-700 bg-red-900/20 text-red-400'
+                            : 'border-gray-600 bg-gray-800 text-gray-300 hover:border-cyan-600'
+                        }`}
+                      >
+                        {file.verifying
+                          ? '...'
+                          : file.verifyResult
+                            ? file.verifyResult.passed
+                              ? '✓ OK'
+                              : `✗ ${file.verifyResult.issues.length}`
+                            : 'Verify'}
+                      </button>
+                      {file.verifyResult &&
+                        !file.verifyResult.passed &&
+                        file.verifyResult.issues.length > 0 && (
+                          <div
+                            className="text-xs text-red-400 mt-1 max-w-[100px] truncate"
+                            title={file.verifyResult.issues
+                              .map((i) => i.message)
+                              .join('\n')}
+                          >
+                            {file.verifyResult.issues[0].message}
+                          </div>
+                        )}
                     </div>
 
                     {/* Match Selector */}
