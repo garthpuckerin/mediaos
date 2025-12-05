@@ -184,7 +184,7 @@ function parseSeriesFilename(name: string, result: ParsedMedia): void {
       const qualityMatch = afterEpisode.match(
         /\b(720p|1080p|2160p|4k|hdtv|web|bluray)/i
       );
-      if (qualityMatch && qualityMatch.index) {
+      if (qualityMatch && qualityMatch.index !== undefined) {
         result.episodeTitle = cleanTitle(
           afterEpisode.slice(0, qualityMatch.index)
         );
@@ -222,7 +222,7 @@ function parseMovieFilename(name: string, result: ParsedMedia): void {
   } else {
     // No year found, try to find title before quality info
     const qualityMatch = name.match(/\b(720p|1080p|2160p|4k|hdtv|web|bluray)/i);
-    if (qualityMatch && qualityMatch.index) {
+    if (qualityMatch && qualityMatch.index !== undefined) {
       result.title = cleanTitle(name.slice(0, qualityMatch.index));
     } else {
       result.title = cleanTitle(name);
