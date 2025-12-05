@@ -123,8 +123,10 @@ app.get('/api/system/info', async (_request, _reply) => {
 app.setErrorHandler(async (error, request, reply) => {
   app.log.error(error);
 
-  const statusCode = error.statusCode || 500;
-  const message = statusCode === 500 ? 'Internal Server Error' : error.message;
+  const err = error as { statusCode?: number; message?: string };
+  const statusCode = err.statusCode || 500;
+  const message =
+    statusCode === 500 ? 'Internal Server Error' : err.message || 'Error';
 
   reply.code(statusCode).send({
     error: true,
