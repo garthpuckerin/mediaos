@@ -280,6 +280,172 @@ const plugin: FastifyPluginAsync = async (app) => {
   });
 
   /**
+   * POST /api/scanner/preview
+   * Scan a specific path and return parsed files without importing
+   */
+  app.post(
+    '/api/scanner/preview',
+    { preHandler: authenticate },
+    async (req) => {
+      const schema = z.object({
+        path: z.string(),
+        kind: z.enum(['movies', 'series', 'music', 'books']).optional(),
+      });
+
+      const { path: scanPath, kind } = schema.parse(req.body);
+
+      // Import parseFilename dynamically
+      const { parseFilename, isMediaFile } = await import(
+        '../services/scanner/fileParser.js'
+      );
+
+      // Verify path exists
+      try {
+        await fs.access(scanPath);
+      } catch {
+        return {
+          ok: false,
+          error: `Path not accessible: ${scanPath}`,
+        };
+      }
+
+      const files: Array<{
+        path: string;
+        filename: string;
+        parsed: ReturnType<typeof parseFilename>;
+        size: number;
+      }> = [];
+
+      // Recursively scan directory
+      async function scanDir(dir: string) {
+        try {
+          const entries = await fs.readdir(dir, { withFileTypes: true });
+
+          for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+
+            if (entry.isDirectory()) {
+              // Skip hidden directories
+              if (!entry.name.startsWith('.')) {
+                await scanDir(fullPath);
+              }
+            } else if (entry.isFile() && isMediaFile(entry.name)) {
+              const parsed = parseFilename(entry.name);
+
+              // Filter by kind if specified
+              if (kind) {
+                const kindMap: Record<string, string> = {
+                  movies: 'movie',
+                  series: 'series',
+                  music: 'music',
+                  books: 'book',
+                };
+                if (parsed.type !== kindMap[kind]) {
+                  continue;
+                }
+              }
+
+              try {
+                const stats = await fs.stat(fullPath);
+                files.push({
+                  path: fullPath,
+                  filename: entry.name,
+                  parsed,
+                  size: stats.size,
+                });
+              } catch {
+                // Skip files we can't stat
+              }
+            }
+          }
+        } catch {
+          // Skip directories we can't read
+        }
+      }
+
+      await scanDir(scanPath);
+
+      return {
+        ok: true,
+        files,
+        count: files.length,
+      };
+    }
+  );
+
+  /**
+   * POST /api/scanner/import
+   * Import scanned files into library with matched items
+   */
+  app.post('/api/scanner/import', { preHandler: requireAdmin }, async (req) => {
+    const schema = z.object({
+      kind: z.enum(['movies', 'series', 'music', 'books']),
+      files: z.array(
+        z.object({
+          path: z.string(),
+          itemId: z.string(),
+          parsed: z.record(z.unknown()),
+        })
+      ),
+    });
+
+    const { kind, files } = schema.parse(req.body);
+
+    if (files.length === 0) {
+      return {
+        ok: false,
+        error: 'No files to import',
+      };
+    }
+
+    const existingItems = await loadLibrary();
+    let imported = 0;
+
+    for (const file of files) {
+      // Find the target library item
+      const itemIndex = existingItems.findIndex((it) => it.id === file.itemId);
+
+      if (itemIndex < 0) {
+        // Item doesn't exist - skip or create?
+        continue;
+      }
+
+      // Verify file exists
+      try {
+        const stats = await fs.stat(file.path);
+
+        // Update the library item with file info
+        existingItems[itemIndex] = {
+          ...existingItems[itemIndex],
+          filePath: file.path,
+          fileSize: stats.size,
+          quality:
+            (file.parsed as any).quality || existingItems[itemIndex].quality,
+          source:
+            (file.parsed as any).source || existingItems[itemIndex].source,
+          metadata: {
+            ...existingItems[itemIndex].metadata,
+            ...(file.parsed as object),
+            importedAt: new Date().toISOString(),
+          },
+        };
+
+        imported++;
+      } catch {
+        // File not accessible - skip
+      }
+    }
+
+    await saveLibrary(existingItems);
+
+    return {
+      ok: true,
+      count: imported,
+      total: files.length,
+    };
+  });
+
+  /**
    * POST /api/scanner/rescan
    * Rescan a specific folder
    */
