@@ -460,54 +460,60 @@
 
 ## Implementation Roadmap to 90% Parity
 
-### Phase 1: Core Automation (Weeks 1-4)
+### Phase 1: Core Automation (Weeks 1-6)
 
 **Goal:** Enable automatic monitoring and searching
 
-- [ ] Implement RSS feed monitoring
-- [ ] Build automatic search triggers
-- [ ] Add monitoring toggle per item
-- [ ] Create search queue system
+- [ ] Implement RSS feed monitoring (2 weeks)
+- [ ] Build automatic search triggers (1 week)
+- [ ] Add monitoring toggle per item (1 week)
+- [ ] Create search queue system (1 week)
+- [ ] Enhanced scheduled tasks manager (2 weeks)
 - [ ] **Target:** 75% overall parity
 
-### Phase 2: Request System (Weeks 5-8)
+### Phase 2: Request System (Weeks 7-14)
 
 **Goal:** Complete request workflow
 
-- [ ] Build approval workflow UI
-- [ ] Implement RBAC system
-- [ ] Add auto-approval rules
-- [ ] Create notification system
+- [ ] Build approval workflow UI (2 weeks)
+- [ ] Implement RBAC system (2 weeks)
+- [ ] Add auto-approval rules (1 week)
+- [ ] Create notification system (3-4 weeks)
+- [ ] Media server integration (2-3 weeks)
 - [ ] **Target:** 80% overall parity
 
-### Phase 3: Quality Upgrades (Weeks 9-12)
+### Phase 3: Quality Upgrades (Weeks 15-20)
 
 **Goal:** Automatic quality management
 
-- [ ] Implement upgrade detection
-- [ ] Build upgrade queue
-- [ ] Add user approval flow
-- [ ] Create upgrade history
+- [ ] Implement upgrade detection (2 weeks)
+- [ ] Build upgrade queue (1 week)
+- [ ] Add user approval flow (1 week)
+- [ ] Create upgrade history (1 week)
+- [ ] Testing and refinement (1 week)
 - [ ] **Target:** 85% overall parity
 
-### Phase 4: Failed Download Handling (Weeks 13-16)
+### Phase 4: Failed Download Handling (Weeks 21-26)
 
 **Goal:** Robust error recovery
 
-- [ ] Build retry logic
-- [ ] Implement blacklist system
-- [ ] Add failure notifications
-- [ ] Create failure analytics
+- [ ] Build retry logic (2 weeks)
+- [ ] Implement blacklist system (1 week)
+- [ ] Add failure notifications (1 week)
+- [ ] Create failure analytics (1 week)
+- [ ] Testing and edge cases (1 week)
 - [ ] **Target:** 88% overall parity
 
-### Phase 5: Analytics & Polish (Weeks 17-20)
+### Phase 5: Analytics & Polish (Weeks 27-38)
 
 **Goal:** Complete telemetry and polish
 
-- [ ] Build analytics dashboard
-- [ ] Add custom reports
-- [ ] Implement export features
-- [ ] Polish UI/UX
+- [ ] Build analytics dashboard (4-5 weeks)
+- [ ] System health dashboard (3-4 weeks)
+- [ ] Add custom reports (1 week)
+- [ ] Implement export features (1 week)
+- [ ] Backup & restore system (2 weeks)
+- [ ] Polish UI/UX (2 weeks)
 - [ ] **Target:** 90% overall parity
 
 ---
@@ -566,7 +572,7 @@ MediaOS has achieved **68% build completion** and **52% platform parity**. The f
 - Limited analytics/telemetry
 - No failed download handling
 
-**Path to 90% Parity:** ~20 weeks of focused development on automation, requests, and quality management features.
+**Path to 90% Parity:** ~38 weeks (9-10 months) of focused development on automation, requests, quality management, and analytics features. This accounts for realistic complexity, testing, integration, and edge cases.
 
 ---
 
