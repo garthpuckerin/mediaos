@@ -28,6 +28,7 @@ import { onboardingRoutes } from './routes/onboarding';
 import { pluginsRoutes } from './routes/plugins';
 import scannerRoutes from './routes/scanner';
 import organizerRoutes from './routes/organizer';
+import metadataRoutes from './routes/metadata';
 import { validateConfigWithWarnings } from './services/config';
 import { validateOrExit } from './services/envValidation';
 import { loadDownloadersWithCredentials } from './routes/settings';
@@ -94,6 +95,7 @@ await app.register(onboardingRoutes, { prefix: '/api/onboarding' });
 await app.register(pluginsRoutes, { prefix: '/api/plugins' });
 await app.register(scannerRoutes);
 await app.register(organizerRoutes);
+await app.register(metadataRoutes, { prefix: '/api/metadata' });
 
 // Health check endpoint
 app.get('/api/system/health', async (_request, _reply) => {
